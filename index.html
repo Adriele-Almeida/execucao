@@ -264,7 +264,7 @@
       </section>
 
       <section class="section hidden" id="calendarSection">
-        <div class="section-heading"><h3>Calendário de postagens programadas</h3></div>
+        <div class="section-heading"><h3 id="calendarHeading">Calendário</h3></div>
         <div class="calendar-box">
           <div class="calendar-toolbar">
             <button class="btn btn-ghost btn-small" type="button" onclick="changeCalendar(-1)">‹</button>
@@ -562,14 +562,17 @@
 
     function renderCalendarSection() {
       const section=document.getElementById('calendarSection');
-      if(state.view!=='Programado') { section.classList.add('hidden'); return; }
+      if(state.view!=='Todos' && state.view!=='Programado') { section.classList.add('hidden'); return; }
       section.classList.remove('hidden');
+      document.getElementById('calendarHeading').textContent=state.view==='Programado'?'Calendário de postagens programadas':'Calendário';
       if(state.month && state.year) calendarDate=new Date(Number(state.year),Number(state.month)-1,1);
       renderCalendar();
     }
 
     function calendarPosts() {
-      let posts=getPosts().filter(post=>post.status==='Programado');
+      let posts=getPosts().filter(post=>post.date);
+      if(state.view==='Programado') posts=posts.filter(post=>post.status==='Programado');
+      else if(state.status) posts=posts.filter(post=>post.status===state.status);
       if(state.clientId) posts=posts.filter(post=>post.clientId===state.clientId);
       return posts;
     }
