@@ -157,6 +157,9 @@
     .auth-brand { margin-bottom:24px; color:var(--cyan); font:700 18px 'Exo 2',sans-serif; letter-spacing:1.5px; text-transform:uppercase; }
     .auth-card p { margin:-14px 0 22px; color:var(--muted); font-size:14px; }
     .auth-card .field { margin-bottom:14px; }
+    .password-wrap { position:relative; }
+    .password-wrap .control { padding-right:78px; }
+    .password-toggle { position:absolute; right:7px; top:50%; transform:translateY(-50%); border:0; background:transparent; color:var(--cyan); font-size:11px; font-weight:700; }
     .auth-link { display:block; width:100%; margin-top:12px; border:0; background:transparent; color:var(--cyan); font-size:12px; text-decoration:underline; }
     .auth-error { min-height:20px; margin-top:12px; color:var(--red); font-size:13px; }
     .account-button { min-height:38px; max-width:150px; overflow:hidden; border:1px solid var(--border); border-radius:6px; padding:7px 10px; background:transparent; color:var(--muted); text-overflow:ellipsis; white-space:nowrap; font-size:12px; }
@@ -173,7 +176,7 @@
       .brand h1 { font-size:11px; letter-spacing:1.5px; }
       .brand p { font-size:10px; }
       .header-actions .btn { min-height:34px; padding:7px 9px; font-size:10px; }
-      .account-button { display:none; }
+      .account-button { display:inline-flex; }
       .app-shell { display:block; min-height:calc(100vh - 66px); }
       .sidebar { position:sticky; top:66px; z-index:90; width:100%; height:auto; padding:8px; overflow-x:auto; border-right:0; border-bottom:1px solid var(--border); white-space:nowrap; }
       .nav-label,.nav-separator { display:none; }
@@ -226,7 +229,7 @@
     <div class="header-actions">
       <button class="btn btn-primary" type="button" onclick="openPostModal()">Nova postagem</button>
       <button class="btn btn-ghost" type="button" onclick="openClientModal()">Novo cliente</button>
-      <button class="account-button" id="accountButton" type="button" onclick="signOut()" title="Sair do aplicativo"></button>
+      <button class="btn btn-ghost account-button" id="accountButton" type="button" onclick="signOut()" title="Sair do aplicativo">Sair</button>
       <button class="icon-btn" type="button" onclick="toggleActivity()" aria-label="Abrir atualizações">◇<span class="notification-count" id="notificationCount">0</span></button>
     </div>
   </header>
@@ -354,10 +357,9 @@
     <div class="modal">
       <div class="modal-title" id="postModalTitle">Nova postagem</div>
       <div class="form-grid">
-        <div class="field form-group full"><label for="pTitle">O que precisa ser feito</label><input class="control" id="pTitle" type="text"></div>
-        <div class="field form-group"><label for="pClient">Cliente</label><select class="control" id="pClient"></select></div>
-        <div class="field form-group"><label for="pStatus">Etapa</label><select class="control" id="pStatus" onchange="toggleScheduleFields()"><option>A fazer</option><option>Conferir</option><option>Refinar</option><option>Programado</option><option>Publicado</option></select></div>
-        <div class="field form-group"><label for="pType">Tipo</label><select class="control" id="pType"><option>Carrossel</option><option>Post</option><option>Story</option><option>Reels</option></select></div>
+        <div class="field form-group"><label for="pClient">Cliente</label><select class="control" id="pClient"><option value="">Selecione o cliente</option></select></div>
+        <div class="field form-group"><label for="pStatus">Etapa</label><select class="control" id="pStatus" onchange="toggleScheduleFields()"><option value="">Selecione a etapa</option><option>A fazer</option><option>Conferir</option><option>Refinar</option><option>Programado</option><option>Publicado</option></select></div>
+        <div class="field form-group"><label for="pType">Tipo</label><select class="control" id="pType"><option value="">Selecione o tipo</option><option>Carrossel</option><option>Post</option><option>Story</option><option>Reels</option></select></div>
         <div class="field form-group"><label for="pDate">Data</label><input class="control" id="pDate" type="date"></div>
         <div class="field form-group hidden" id="timeField"><label for="pTime">Horário</label><input class="control" id="pTime" type="time"></div>
         <div class="field form-group full"><label for="pCanva">Link da arte</label><input class="control" id="pCanva" type="url" placeholder="https://"></div>
@@ -395,7 +397,7 @@
       <div class="auth-brand">ORDEM DE EXECUÇÃO</div>
       <p>Entre com seu e-mail e senha para acessar a base operacional.</p>
       <div class="field"><label for="authEmail">E-mail</label><input class="control" id="authEmail" type="email" autocomplete="username" required></div>
-      <div class="field"><label for="authPassword">Senha</label><input class="control" id="authPassword" type="password" autocomplete="current-password" required></div>
+      <div class="field"><label for="authPassword">Senha</label><div class="password-wrap"><input class="control" id="authPassword" type="password" autocomplete="current-password" required><button class="password-toggle" type="button" onclick="togglePasswordVisibility('authPassword',this)">Mostrar</button></div></div>
       <button class="btn btn-primary" id="authSubmit" type="submit" style="width:100%">Entrar</button>
       <button class="auth-link" type="button" onclick="requestPasswordReset()">Esqueci minha senha</button>
       <div class="auth-error" id="authError"></div>
@@ -403,7 +405,7 @@
     <form class="auth-card hidden" id="passwordRecoveryForm" onsubmit="saveNewPassword(event)">
       <div class="auth-brand">NOVA SENHA</div>
       <p>Defina a nova senha para acessar a base operacional.</p>
-      <div class="field"><label for="newPassword">Nova senha</label><input class="control" id="newPassword" type="password" autocomplete="new-password" minlength="6" required></div>
+      <div class="field"><label for="newPassword">Nova senha</label><div class="password-wrap"><input class="control" id="newPassword" type="password" autocomplete="new-password" minlength="6" required><button class="password-toggle" type="button" onclick="togglePasswordVisibility('newPassword',this)">Mostrar</button></div></div>
       <button class="btn btn-primary" id="newPasswordSubmit" type="submit" style="width:100%">Salvar nova senha</button>
       <div class="auth-error" id="passwordRecoveryError"></div>
     </form>
@@ -571,7 +573,7 @@
       action.classList.remove('hidden');
       if(state.view==='Clientes') { action.textContent='Novo cliente'; action.onclick=()=>openClientModal(); }
       else if(state.view==='Configurações') action.classList.add('hidden');
-      else { action.textContent=state.view==='Programado'?'Nova programação':'Nova postagem'; action.onclick=()=>openPostModal(null,STATUSES.includes(state.view)?state.view:(state.status||'A fazer')); }
+      else { action.textContent=state.view==='Programado'?'Nova programação':'Nova postagem'; action.onclick=()=>openPostModal(); }
     }
 
     function renderSummary() {
@@ -709,7 +711,7 @@
         const key=dateKey(new Date(year,month,day));
         const events=posts.filter(post=>post.date===key).sort((a,b)=>(a.hora||'').localeCompare(b.hora||''));
         const isToday=dateKey(today)===key;
-        html+=`<div class="calendar-day ${isToday?'today':''}" ondblclick="openPostModal(null,'Programado','${key}')"><span class="day-number">${day}</span>${events.map(post=>calendarEvent(post,clients)).join('')}</div>`;
+        html+=`<div class="calendar-day ${isToday?'today':''}" ondblclick="openPostModal(null,'','${key}')"><span class="day-number">${day}</span>${events.map(post=>calendarEvent(post,clients)).join('')}</div>`;
       }
       const grid=document.getElementById('calendarGrid'); grid.className='calendar-grid month'; grid.innerHTML=html;
     }
@@ -721,27 +723,26 @@
       const days=Array.from({length:7},(_,index)=>new Date(start.getFullYear(),start.getMonth(),start.getDate()+index));
       document.getElementById('calendarTitle').textContent=`${days[0].getDate()} ${MONTHS[days[0].getMonth()].slice(0,3)} a ${days[6].getDate()} ${MONTHS[days[6].getMonth()].slice(0,3)} ${days[6].getFullYear()}`;
       const grid=document.getElementById('calendarGrid'); grid.className='week-grid';
-      grid.innerHTML=days.map(day=>{ const key=dateKey(day), events=posts.filter(post=>post.date===key).sort((a,b)=>(a.hora||'').localeCompare(b.hora||'')); return `<div class="week-day ${key===today?'today':''}" ondblclick="openPostModal(null,'Programado','${key}')"><h4>${SHORT_DAYS[day.getDay()]} · ${day.getDate()}</h4>${events.length?events.map(post=>calendarEvent(post,clients)).join(''):'<span style="color:var(--faint);font-size:11px">Sem programação</span>'}</div>`; }).join('');
+      grid.innerHTML=days.map(day=>{ const key=dateKey(day), events=posts.filter(post=>post.date===key).sort((a,b)=>(a.hora||'').localeCompare(b.hora||'')); return `<div class="week-day ${key===today?'today':''}" ondblclick="openPostModal(null,'','${key}')"><h4>${SHORT_DAYS[day.getDay()]} · ${day.getDate()}</h4>${events.length?events.map(post=>calendarEvent(post,clients)).join(''):'<span style="color:var(--faint);font-size:11px">Sem programação</span>'}</div>`; }).join('');
     }
 
     function renderDayCalendar() {
       const key=dateKey(calendarDate), posts=calendarPosts().filter(post=>post.date===key).sort((a,b)=>(a.hora||'').localeCompare(b.hora||'')), clients=getClients();
       document.getElementById('calendarTitle').textContent=`${SHORT_DAYS[calendarDate.getDay()]}, ${calendarDate.getDate()} de ${MONTHS[calendarDate.getMonth()]} de ${calendarDate.getFullYear()}`;
       const grid=document.getElementById('calendarGrid'); grid.className='day-list';
-      grid.innerHTML=posts.length?posts.map(post=>{ const client=clients.find(item=>item.id===post.clientId); return `<button class="day-event" style="width:100%;border:0;background:transparent;color:inherit;text-align:left" type="button" onclick="openPostModal('${post.id}')"><strong>${escapeHtml(post.hora||'Sem hora')}</strong><span>${escapeHtml(post.title)}<br><small>${escapeHtml(client?.name||'')}</small></span><span class="badge status-programado">Programado</span></button>`; }).join(''):`<div class="empty-state"><strong>Nenhuma postagem programada</strong><button class="btn btn-primary btn-small" type="button" onclick="openPostModal(null,'Programado','${key}')">Programar neste dia</button></div>`;
+      grid.innerHTML=posts.length?posts.map(post=>{ const client=clients.find(item=>item.id===post.clientId); return `<button class="day-event" style="width:100%;border:0;background:transparent;color:inherit;text-align:left" type="button" onclick="openPostModal('${post.id}')"><strong>${escapeHtml(post.hora||'Sem hora')}</strong><span>${escapeHtml(post.title)}<br><small>${escapeHtml(client?.name||'')}</small></span><span class="badge status-programado">Programado</span></button>`; }).join(''):`<div class="empty-state"><strong>Nenhuma postagem programada</strong><button class="btn btn-primary btn-small" type="button" onclick="openPostModal(null,'','${key}')">Programar neste dia</button></div>`;
     }
 
-    function openPostModal(id=null,defaultStatus='A fazer',defaultDate='') {
+    function openPostModal(id=null,defaultStatus='',defaultDate='') {
       const clients=getClients();
       if(!clients.length) { toast('Cadastre um cliente antes de criar uma postagem.'); openView('Clientes'); return; }
       editingPostId=id;
-      document.getElementById('pClient').innerHTML=clients.map(client=>`<option value="${client.id}">${escapeHtml(client.name)}</option>`).join('');
+      document.getElementById('pClient').innerHTML='<option value="">Selecione o cliente</option>'+clients.map(client=>`<option value="${client.id}">${escapeHtml(client.name)}</option>`).join('');
       const post=id?getPosts().find(item=>item.id===id):null;
       document.getElementById('postModalTitle').textContent=post?'Editar postagem':'Nova postagem';
-      document.getElementById('pTitle').value=post?.title||'';
-      document.getElementById('pClient').value=post?.clientId||(state.clientId||clients[0].id);
+      document.getElementById('pClient').value=post?.clientId||'';
       document.getElementById('pStatus').value=post?.status||defaultStatus;
-      document.getElementById('pType').value=post?.type||'Carrossel';
+      document.getElementById('pType').value=post?.type||'';
       document.getElementById('pDate').value=post?.date||defaultDate||'';
       document.getElementById('pTime').value=post?.hora||'';
       document.getElementById('pCanva').value=post?.canva||'';
@@ -755,10 +756,10 @@
     function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
     function savePost() {
-      const title=document.getElementById('pTitle').value.trim(), status=document.getElementById('pStatus').value;
+      const title='', status=document.getElementById('pStatus').value;
       const clientId=document.getElementById('pClient').value, date=document.getElementById('pDate').value, hora=document.getElementById('pTime').value;
-      if(!title) return toast('Informe o que precisa ser feito.');
       if(!clientId) return toast('Selecione um cliente.');
+      if(!status) return toast('Selecione a etapa.');
       if(status==='Programado' && (!date||!hora)) return toast('Postagem programada precisa de data e horário.');
       const posts=getPosts();
       const record={id:editingPostId||String(Date.now()),title,clientId,status,type:document.getElementById('pType').value,date,hora:status==='Programado'?hora:'',canva:document.getElementById('pCanva').value.trim(),legenda:document.getElementById('pCaption').value.trim(),notes:document.getElementById('pNotes').value.trim(),updatedAt:Date.now()};
@@ -777,7 +778,7 @@
     function openClientModal(id=null) {
       editingClientId=id;
       const client=id?getClients().find(item=>item.id===id):null;
-      selectedColor=client?.color||COLORS[0];
+      selectedColor=client?.color||'';
       document.getElementById('clientModalTitle').textContent=client?'Editar cliente':'Novo cliente';
       document.getElementById('cName').value=client?.name||'';
       document.getElementById('cInstagram').value=client?.instagram||'';
@@ -889,6 +890,13 @@
       document.getElementById('authError').textContent='Senha atualizada. Entre com a nova senha.';
     }
 
+    function togglePasswordVisibility(inputId,button) {
+      const input=document.getElementById(inputId);
+      const showing=input.type==='text';
+      input.type=showing?'password':'text';
+      button.textContent=showing?'Mostrar':'Ocultar';
+    }
+
     async function signIn(event) {
       event.preventDefault();
       const error=document.getElementById('authError');
@@ -940,7 +948,7 @@
 
     async function initializeApp() {
       if(!window.supabase || SUPABASE_URL.startsWith('__')) return;
-      if(!supabaseClient) supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+      if(!supabaseClient) supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
       const {data:{session}}=await supabaseClient.auth.getSession();
       if(!session) { document.getElementById('authScreen').classList.remove('hidden'); return; }
       if(location.hash.includes('type=recovery')) { showPasswordRecovery(); return; }
@@ -951,7 +959,7 @@
         await loadCloudData();
         await migrateLocalData();
         await loadCloudData();
-        document.getElementById('accountButton').textContent=profile.display_name||profile.email;
+        document.getElementById('accountButton').textContent='Sair';
         document.getElementById('authScreen').classList.add('hidden');
         render();
         subscribeToChanges();
@@ -971,10 +979,10 @@
     function refreshFromRealtime() { clearTimeout(realtimeTimer); realtimeTimer=setTimeout(async()=>{ await loadCloudData(); render(); },250); }
 
     async function savePost() {
-      const title=document.getElementById('pTitle').value.trim(), status=document.getElementById('pStatus').value;
+      const title='', status=document.getElementById('pStatus').value;
       const clientId=document.getElementById('pClient').value, date=document.getElementById('pDate').value, hora=document.getElementById('pTime').value;
-      if(!title) return toast('Informe o que precisa ser feito.');
       if(!clientId) return toast('Selecione um cliente.');
+      if(!status) return toast('Selecione a etapa.');
       if(status==='Programado' && (!date||!hora)) return toast('Postagem programada precisa de data e horário.');
       const payload={title,client_id:clientId,status,type:document.getElementById('pType').value||null,post_date:date||null,post_time:status==='Programado'?hora:null,canva:document.getElementById('pCanva').value.trim()||null,legenda:document.getElementById('pCaption').value.trim()||null,notes:document.getElementById('pNotes').value.trim()||null,automatic_status_update:false,updated_by:currentProfile.id};
       const result=editingPostId ? await supabaseClient.from('posts').update(payload).eq('id',editingPostId) : await supabaseClient.from('posts').insert({...payload,created_by:currentProfile.id});
