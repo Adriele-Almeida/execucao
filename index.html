@@ -157,6 +157,7 @@
     .auth-brand { margin-bottom:24px; color:var(--cyan); font:700 18px 'Exo 2',sans-serif; letter-spacing:1.5px; text-transform:uppercase; }
     .auth-card p { margin:-14px 0 22px; color:var(--muted); font-size:14px; }
     .auth-card .field { margin-bottom:14px; }
+    .auth-link { display:block; width:100%; margin-top:12px; border:0; background:transparent; color:var(--cyan); font-size:12px; text-decoration:underline; }
     .auth-error { min-height:20px; margin-top:12px; color:var(--red); font-size:13px; }
     .account-button { min-height:38px; max-width:150px; overflow:hidden; border:1px solid var(--border); border-radius:6px; padding:7px 10px; background:transparent; color:var(--muted); text-overflow:ellipsis; white-space:nowrap; font-size:12px; }
     .account-button:hover { border-color:var(--cyan); color:var(--cyan); }
@@ -391,7 +392,18 @@
       <div class="field"><label for="authEmail">E-mail</label><input class="control" id="authEmail" type="email" autocomplete="username" required></div>
       <div class="field"><label for="authPassword">Senha</label><input class="control" id="authPassword" type="password" autocomplete="current-password" required></div>
       <button class="btn btn-primary" id="authSubmit" type="submit" style="width:100%">Entrar</button>
+      <button class="auth-link hidden" id="initialAccessButton" type="button" onclick="showInitialAccess()">Criar acesso inicial</button>
       <div class="auth-error" id="authError"></div>
+    </form>
+    <form class="auth-card hidden" id="initialAccessForm" onsubmit="createInitialAccess(event)">
+      <div class="auth-brand">PRIMEIRO ACESSO</div>
+      <p>Crie o acesso da administradora da base operacional.</p>
+      <div class="field"><label for="setupName">Nome</label><input class="control" id="setupName" type="text" required></div>
+      <div class="field"><label for="setupEmail">E-mail</label><input class="control" id="setupEmail" type="email" autocomplete="username" required></div>
+      <div class="field"><label for="setupPassword">Senha</label><input class="control" id="setupPassword" type="password" autocomplete="new-password" minlength="8" required></div>
+      <button class="btn btn-primary" id="setupSubmit" type="submit" style="width:100%">Criar acesso</button>
+      <button class="auth-link" type="button" onclick="showSignIn()">Voltar para entrar</button>
+      <div class="auth-error" id="setupError"></div>
     </form>
   </section>
 
@@ -845,6 +857,31 @@
 
     function cloudReady() { return Boolean(supabaseClient && currentProfile); }
 
+    function showInitialAccess() {
+      document.querySelector('#authScreen form:first-child').classList.add('hidden');
+      document.getElementById('initialAccessForm').classList.remove('hidden');
+    }
+
+    function showSignIn() {
+      document.getElementById('initialAccessForm').classList.add('hidden');
+      document.querySelector('#authScreen form:first-child').classList.remove('hidden');
+    }
+
+    async function createInitialAccess(event) {
+      event.preventDefault();
+      const error=document.getElementById('setupError'), submit=document.getElementById('setupSubmit');
+      error.textContent=''; submit.disabled=true; submit.textContent='Criando...';
+      const {data,error:signUpError}=await supabaseClient.auth.signUp({
+        email:document.getElementById('setupEmail').value.trim(),
+        password:document.getElementById('setupPassword').value,
+        options:{data:{display_name:document.getElementById('setupName').value.trim()}}
+      });
+      submit.disabled=false; submit.textContent='Criar acesso';
+      if(signUpError) { error.textContent='Não foi possível criar este acesso. Confira os dados e tente novamente.'; return; }
+      if(!data.session) { error.style.color='var(--green)'; error.textContent='Acesse o e-mail informado e confirme o cadastro. Depois volte para entrar.'; return; }
+      await initializeApp();
+    }
+
     async function signIn(event) {
       event.preventDefault();
       const error=document.getElementById('authError');
@@ -897,7 +934,10 @@
       if(!window.supabase || SUPABASE_URL.startsWith('__')) return;
       if(!supabaseClient) supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
       const {data:{session}}=await supabaseClient.auth.getSession();
-      if(!session) { document.getElementById('authScreen').classList.remove('hidden'); return; }
+      if(!session) {
+        document.getElementById('initialAccessButton').classList.toggle('hidden',new URLSearchParams(location.search).get('primeiro-acesso')!=='1');
+        document.getElementById('authScreen').classList.remove('hidden'); return;
+      }
       const {data:profile,error}=await supabaseClient.from('profiles').select('*').eq('id',session.user.id).maybeSingle();
       if(error || !profile || !profile.active) { await supabaseClient.auth.signOut(); document.getElementById('authError').textContent='Este acesso não está ativo.'; document.getElementById('authScreen').classList.remove('hidden'); return; }
       currentProfile=profile;
