@@ -397,18 +397,15 @@
       <div class="field"><label for="authEmail">E-mail</label><input class="control" id="authEmail" type="email" autocomplete="username" required></div>
       <div class="field"><label for="authPassword">Senha</label><input class="control" id="authPassword" type="password" autocomplete="current-password" required></div>
       <button class="btn btn-primary" id="authSubmit" type="submit" style="width:100%">Entrar</button>
-      <button class="auth-link hidden" id="initialAccessButton" type="button" onclick="showInitialAccess()">Criar acesso inicial</button>
+      <button class="auth-link" type="button" onclick="requestPasswordReset()">Esqueci minha senha</button>
       <div class="auth-error" id="authError"></div>
     </form>
-    <form class="auth-card hidden" id="initialAccessForm" onsubmit="createInitialAccess(event)">
-      <div class="auth-brand">PRIMEIRO ACESSO</div>
-      <p>Crie o acesso da administradora da base operacional.</p>
-      <div class="field"><label for="setupName">Nome</label><input class="control" id="setupName" type="text" required></div>
-      <div class="field"><label for="setupEmail">E-mail</label><input class="control" id="setupEmail" type="email" autocomplete="username" required></div>
-      <div class="field"><label for="setupPassword">Senha</label><input class="control" id="setupPassword" type="password" autocomplete="new-password" minlength="8" required></div>
-      <button class="btn btn-primary" id="setupSubmit" type="submit" style="width:100%">Criar acesso</button>
-      <button class="auth-link" type="button" onclick="showSignIn()">Voltar para entrar</button>
-      <div class="auth-error" id="setupError"></div>
+    <form class="auth-card hidden" id="passwordRecoveryForm" onsubmit="saveNewPassword(event)">
+      <div class="auth-brand">NOVA SENHA</div>
+      <p>Defina a nova senha para acessar a base operacional.</p>
+      <div class="field"><label for="newPassword">Nova senha</label><input class="control" id="newPassword" type="password" autocomplete="new-password" minlength="6" required></div>
+      <button class="btn btn-primary" id="newPasswordSubmit" type="submit" style="width:100%">Salvar nova senha</button>
+      <div class="auth-error" id="passwordRecoveryError"></div>
     </form>
   </section>
 
@@ -863,42 +860,33 @@
 
     function cloudReady() { return Boolean(supabaseClient && currentProfile); }
 
-    function registrationMode() {
-      const params=new URLSearchParams(location.search);
-      if(params.get('primeiro-acesso')==='1') return 'initial';
-      if(params.get('novo-acesso')==='1') return 'request';
-      return '';
-    }
-
-    function showInitialAccess() {
+    function showPasswordRecovery() {
       document.querySelector('#authScreen form:first-child').classList.add('hidden');
-      document.getElementById('initialAccessForm').classList.remove('hidden');
-      const requesting=registrationMode()==='request';
-      document.querySelector('#initialAccessForm .auth-brand').textContent=requesting?'SOLICITAR ACESSO':'PRIMEIRO ACESSO';
-      document.querySelector('#initialAccessForm p').textContent=requesting?'Cadastre seus dados. A administradora precisará ativar seu acesso antes da entrada.':'Crie o acesso da administradora da base operacional.';
-      document.getElementById('setupSubmit').textContent=requesting?'Solicitar acesso':'Criar acesso';
+      document.getElementById('passwordRecoveryForm').classList.remove('hidden');
+      document.getElementById('authScreen').classList.remove('hidden');
     }
 
-    function showSignIn() {
-      document.getElementById('initialAccessForm').classList.add('hidden');
-      document.querySelector('#authScreen form:first-child').classList.remove('hidden');
+    async function requestPasswordReset() {
+      const email=document.getElementById('authEmail').value.trim(), error=document.getElementById('authError');
+      if(!email) { error.style.color='var(--red)'; error.textContent='Informe seu e-mail para receber o link de redefinição.'; return; }
+      const {error:resetError}=await supabaseClient.auth.resetPasswordForEmail(email,{redirectTo:`${location.origin}${location.pathname}`});
+      if(resetError) { error.style.color='var(--red)'; error.textContent='Não foi possível enviar o link. Tente novamente.'; return; }
+      error.style.color='var(--green)'; error.textContent='Enviamos um link para redefinir sua senha.';
     }
 
-    async function createInitialAccess(event) {
+    async function saveNewPassword(event) {
       event.preventDefault();
-      const error=document.getElementById('setupError'), submit=document.getElementById('setupSubmit');
-      error.textContent=''; submit.disabled=true; submit.textContent='Criando...';
-      const {data,error:signUpError}=await supabaseClient.auth.signUp({
-        email:document.getElementById('setupEmail').value.trim(),
-        password:document.getElementById('setupPassword').value,
-        options:{data:{display_name:document.getElementById('setupName').value.trim()}}
-      });
-      submit.disabled=false; submit.textContent=registrationMode()==='request'?'Solicitar acesso':'Criar acesso';
-      if(signUpError) { error.textContent='Não foi possível criar este acesso. Confira os dados e tente novamente.'; return; }
-      const requesting=registrationMode()==='request';
-      if(!data.session) { error.style.color='var(--green)'; error.textContent=requesting?'Acesse o e-mail informado para confirmar. Depois aguarde a ativação da administradora.':'Acesse o e-mail informado e confirme o cadastro. Depois volte para entrar.'; return; }
-      if(requesting) { await supabaseClient.auth.signOut(); showSignIn(); document.getElementById('authError').style.color='var(--green)'; document.getElementById('authError').textContent='Solicitação registrada. Aguarde a ativação da administradora.'; return; }
-      await initializeApp();
+      const error=document.getElementById('passwordRecoveryError'), submit=document.getElementById('newPasswordSubmit');
+      error.textContent=''; submit.disabled=true; submit.textContent='Salvando...';
+      const {error:updateError}=await supabaseClient.auth.updateUser({password:document.getElementById('newPassword').value});
+      submit.disabled=false; submit.textContent='Salvar nova senha';
+      if(updateError) { error.textContent='Não foi possível atualizar a senha. Abra novamente o link recebido por e-mail.'; return; }
+      history.replaceState({},document.title,location.pathname);
+      document.getElementById('passwordRecoveryForm').classList.add('hidden');
+      document.querySelector('#authScreen form:first-child').classList.remove('hidden');
+      document.getElementById('authPassword').value='';
+      document.getElementById('authError').style.color='var(--green)';
+      document.getElementById('authError').textContent='Senha atualizada. Entre com a nova senha.';
     }
 
     async function signIn(event) {
@@ -954,12 +942,8 @@
       if(!window.supabase || SUPABASE_URL.startsWith('__')) return;
       if(!supabaseClient) supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
       const {data:{session}}=await supabaseClient.auth.getSession();
-      if(!session) {
-        const mode=registrationMode(), setupButton=document.getElementById('initialAccessButton');
-        setupButton.classList.toggle('hidden',!mode);
-        setupButton.textContent=mode==='request'?'Solicitar acesso':'Criar acesso inicial';
-        document.getElementById('authScreen').classList.remove('hidden'); return;
-      }
+      if(!session) { document.getElementById('authScreen').classList.remove('hidden'); return; }
+      if(location.hash.includes('type=recovery')) { showPasswordRecovery(); return; }
       const {data:profile,error}=await supabaseClient.from('profiles').select('*').eq('id',session.user.id).maybeSingle();
       if(error || !profile || !profile.active) { await supabaseClient.auth.signOut(); document.getElementById('authError').textContent='Este acesso não está ativo.'; document.getElementById('authScreen').classList.remove('hidden'); return; }
       currentProfile=profile;
