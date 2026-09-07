@@ -340,6 +340,11 @@
               <button class="btn btn-danger" id="deleteClientButton" type="button" onclick="deleteClientFromSettings()" disabled>Excluir cliente definitivamente</button>
             </div>
           </article>
+          <article class="settings-card hidden" id="accessManagementCard">
+            <h3>Controle de acessos</h3>
+            <p>Ative ou pause o acesso de cada pessoa cadastrada. Apenas a administradora vê esta área.</p>
+            <div id="accessManagementList"></div>
+          </article>
         </div>
       </section>
     </main>
@@ -840,6 +845,7 @@
     let cloudClients = [];
     let cloudPosts = [];
     let cloudActivities = [];
+    let cloudProfiles = [];
     let currentProfile = null;
     let activityReadAt = null;
     let realtimeChannel = null;
@@ -911,6 +917,7 @@
       ]);
       if(clientsResult.error || postsResult.error || activitiesResult.error) throw new Error('Não foi possível carregar os dados compartilhados.');
       const people=new Map((profilesResult.data||[]).map(person=>[person.id,person]));
+      cloudProfiles=profilesResult.data||[];
       cloudClients=(clientsResult.data||[]).map(mapClient);
       cloudPosts=(postsResult.data||[]).map(mapPost);
       cloudActivities=(activitiesResult.data||[]).map(item=>({...item,actor:people.get(item.actor_id)}));
@@ -1017,6 +1024,20 @@
       const count=document.getElementById('notificationCount'); count.textContent=String(Math.min(unread,99)); count.style.display=unread?'block':'none';
     }
 
+    function renderAccessManagement() {
+      const card=document.getElementById('accessManagementCard');
+      if(state.view!=='Configurações' || currentProfile?.role!=='admin') { card.classList.add('hidden'); return; }
+      card.classList.remove('hidden');
+      const list=document.getElementById('accessManagementList');
+      list.innerHTML=cloudProfiles.map(person=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--border)"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis"><strong style="display:block;color:var(--text)">${escapeHtml(person.display_name||person.email)}</strong><small style="color:var(--muted)">${escapeHtml(person.email)}${person.role==='admin'?' · Administradora':''}</small></span>${person.id===currentProfile.id?'<span class="badge status-publicado">Seu acesso</span>':`<button class="btn ${person.active?'btn-ghost':'btn-primary'} btn-small" type="button" onclick="setAccessActive('${person.id}',${!person.active})">${person.active?'Pausar':'Ativar'}</button>`}</div>`).join('')||'<div class="empty-state">Nenhum acesso cadastrado.</div>';
+    }
+
+    async function setAccessActive(userId,active) {
+      const {error}=await supabaseClient.from('profiles').update({active}).eq('id',userId);
+      if(error) return toast('Não foi possível atualizar este acesso.');
+      await loadCloudData(); render(); toast(active?'Acesso ativado.':'Acesso pausado.');
+    }
+
     async function updateAutomaticStatuses() {
       if(!cloudReady()) return;
       const now=new Date();
@@ -1026,7 +1047,7 @@
       await loadCloudData(); render();
     }
 
-    function render() { updateAutomaticStatuses(); renderNav(); populateFilterOptions(); renderFilterControls(); renderMainContent(); renderNotificationCount(); }
+    function render() { updateAutomaticStatuses(); renderNav(); populateFilterOptions(); renderFilterControls(); renderMainContent(); renderAccessManagement(); renderNotificationCount(); }
 
     document.querySelectorAll('.modal-overlay').forEach(overlay=>overlay.addEventListener('click',event=>{ if(event.target===overlay) closeModal(overlay.id); }));
     document.addEventListener('keydown',event=>{ if(event.key==='Escape') document.querySelectorAll('.modal-overlay.open').forEach(modal=>closeModal(modal.id)); });
