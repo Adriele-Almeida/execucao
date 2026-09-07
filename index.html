@@ -162,9 +162,28 @@
     .password-toggle { position:absolute; right:7px; top:50%; transform:translateY(-50%); border:0; background:transparent; color:var(--cyan); font-size:11px; font-weight:700; }
     .auth-link { display:block; width:100%; margin-top:12px; border:0; background:transparent; color:var(--cyan); font-size:12px; text-decoration:underline; }
     .auth-error { min-height:20px; margin-top:12px; color:var(--red); font-size:13px; }
-    .account-button { min-height:38px; max-width:150px; overflow:hidden; border:1px solid var(--border); border-radius:6px; padding:7px 10px; background:transparent; color:var(--muted); text-overflow:ellipsis; white-space:nowrap; font-size:12px; }
+    .account-button { width:42px; height:42px; border:1px solid var(--border); border-radius:8px; padding:0; background:transparent; color:var(--text); font-size:22px; line-height:1; }
     .account-button:hover { border-color:var(--cyan); color:var(--cyan); }
+    .account-menu { display:none; position:fixed; z-index:250; top:65px; right:24px; width:min(310px,calc(100vw - 28px)); padding:9px; border:1px solid var(--border); border-radius:10px; background:var(--surface); box-shadow:0 18px 42px rgba(0,0,0,.42); }
+    .account-menu.open { display:block; }
+    .account-menu-title { padding:8px 9px 5px; color:var(--faint); font:600 10px 'Exo 2',sans-serif; letter-spacing:1.3px; text-transform:uppercase; }
+    .account-menu-item { display:flex; align-items:center; gap:10px; width:100%; padding:10px 9px; border:0; border-radius:6px; background:transparent; color:var(--text); text-align:left; }
+    .account-menu-item:hover { background:var(--surface-2); }
+    .profile-avatar { width:36px; height:36px; flex:none; overflow:hidden; display:grid; place-items:center; border:1px solid var(--border); border-radius:50%; background:var(--surface-2); color:var(--cyan); font-weight:700; }
+    .profile-avatar img { width:100%; height:100%; object-fit:cover; }
+    .account-menu-item small { display:block; margin-top:2px; color:var(--muted); font-size:12px; }
+    .profile-divider { height:1px; margin:7px 0; background:var(--border); }
+    .profile-header { display:flex; align-items:center; gap:13px; margin-bottom:18px; }
+    .profile-header .profile-avatar { width:62px; height:62px; font-size:20px; }
+    .profile-header h3 { color:var(--text); font-size:18px; }
+    .profile-header p { margin:3px 0 0; color:var(--muted); font-size:13px; }
+    .profile-upload-row { display:flex; align-items:center; gap:10px; margin:0 0 16px; }
+    .profile-upload-row input { display:none; }
+    .profile-contact-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+    .profile-contact-actions .btn[disabled] { cursor:not-allowed; opacity:.42; }
     .hidden { display:none !important; }
+    .auth-screen.auth-checking .auth-card { display:none; }
+    .auth-screen.auth-checking::after { content:'Abrindo...'; color:var(--muted); font:600 14px 'Exo 2',sans-serif; letter-spacing:1px; }
 
     @media (max-width:1050px) {
       .filter-panel { grid-template-columns:repeat(3,1fr); }
@@ -351,8 +370,8 @@
     <div class="header-actions">
       <button class="btn btn-primary" type="button" onclick="openPostModal()">Nova postagem</button>
       <button class="btn btn-ghost" type="button" onclick="openClientModal()">Novo cliente</button>
-      <button class="btn btn-ghost account-button" id="accountButton" type="button" onclick="signOut()" title="Sair do aplicativo">Sair</button>
       <button class="icon-btn" type="button" onclick="toggleActivity()" aria-label="Abrir atualizações">◇<span class="notification-count" id="notificationCount">0</span></button>
+      <button class="account-button" id="accountButton" type="button" onclick="toggleAccountMenu()" aria-label="Abrir menu do perfil" title="Perfil">⋯</button>
     </div>
   </header>
 
@@ -547,9 +566,18 @@
     </div>
   </div>
 
+  <div class="account-menu" id="accountMenu" aria-label="Menu de perfil"></div>
+
+  <div class="modal-overlay" id="profileModal" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
+    <div class="modal">
+      <div class="modal-title" id="profileModalTitle">Meu perfil</div>
+      <div id="profileModalContent"></div>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
-  <section class="auth-screen" id="authScreen" aria-label="Acesso ao aplicativo">
+  <section class="auth-screen auth-checking" id="authScreen" aria-label="Acesso ao aplicativo">
     <form class="auth-card" onsubmit="signIn(event)">
       <div class="auth-brand">ORDEM DE EXECUÇÃO</div>
       <p>Faça seu login</p>
@@ -1072,12 +1100,119 @@
       await initializeApp();
     }
 
+    function initials(person) {
+      return String(person?.display_name || person?.email || '?').trim().split(/\s+/).map(part=>part[0]).join('').slice(0,2).toUpperCase() || '?';
+    }
+    function profileAvatar(person) {
+      return person?.avatar_url ? `<img src="${escapeHtml(person.avatar_url)}" alt="">` : escapeHtml(initials(person));
+    }
+    function toggleAccountMenu() {
+      const menu=document.getElementById('accountMenu');
+      menu.classList.toggle('open');
+      if(menu.classList.contains('open')) renderAccountMenu();
+    }
+    function renderAccountMenu() {
+      const menu=document.getElementById('accountMenu');
+      const me=currentProfile;
+      const others=cloudProfiles.filter(person=>person.id!==me?.id && person.active);
+      menu.innerHTML=`
+        <div class="account-menu-title">Meu perfil</div>
+        <button class="account-menu-item" type="button" onclick="openOwnProfile()"><span class="profile-avatar">${profileAvatar(me)}</span><span><strong>${escapeHtml(me?.display_name||me?.email||'Meu perfil')}</strong><small>Configurar meu perfil</small></span></button>
+        ${others.length?`<div class="profile-divider"></div><div class="account-menu-title">Pessoas</div>${others.map(person=>`<button class="account-menu-item" type="button" onclick="openProfile('${person.id}')"><span class="profile-avatar">${profileAvatar(person)}</span><span><strong>${escapeHtml(person.display_name||person.email)}</strong><small>${escapeHtml(person.email)}</small></span></button>`).join('')}`:''}
+        <div class="profile-divider"></div>
+        <button class="account-menu-item" type="button" onclick="signOut()">Sair</button>`;
+    }
+    function closeAccountMenu() { document.getElementById('accountMenu').classList.remove('open'); }
+    function isValidPhone(value='') { return value.replace(/\D/g,'').length===11; }
+    function formatPhone(value='') {
+      const digits=value.replace(/\D/g,'').slice(0,11);
+      if(!digits) return '';
+      if(digits.length<=2) return `(${digits}`;
+      if(digits.length<=7) return `(${digits.slice(0,2)}) ${digits.slice(2)}`;
+      return `(${digits.slice(0,2)}) ${digits.slice(2,7)}-${digits.slice(7)}`;
+    }
+    function maskProfilePhone(input) { input.value=formatPhone(input.value); refreshProfileContactButtons(); }
+    function refreshProfileContactButtons() {
+      const phone=document.getElementById('profilePhone')?.value || '';
+      const whats=document.getElementById('profileWhatsAppButton');
+      if(whats) whats.disabled=!isValidPhone(phone);
+    }
+    function openOwnProfile() {
+      closeAccountMenu();
+      const person=currentProfile;
+      document.getElementById('profileModalTitle').textContent='Meu perfil';
+      document.getElementById('profileModalContent').innerHTML=`
+        <div class="profile-header"><span class="profile-avatar" id="profileAvatarPreview">${profileAvatar(person)}</span><div><h3>${escapeHtml(person.display_name||person.email)}</h3><p>${escapeHtml(person.email)}</p></div></div>
+        <div class="profile-upload-row"><label class="btn btn-ghost btn-small" for="profilePhotoInput">${person.avatar_url?'Alterar foto':'Adicionar foto'}</label><input id="profilePhotoInput" type="file" accept="image/*" onchange="uploadProfilePhoto(this.files[0])"></div>
+        <div class="form-grid">
+          <div class="field form-group full"><label for="profileDisplayName">Nome de usuário</label><input class="control" id="profileDisplayName" type="text" value="${escapeHtml(person.display_name||'')}"></div>
+          <div class="field form-group full"><label for="profilePhone">WhatsApp</label><input class="control" id="profilePhone" type="tel" inputmode="numeric" maxlength="16" placeholder="(31) 00000-0000" value="${escapeHtml(formatPhone(person.phone||''))}" oninput="maskProfilePhone(this)"></div>
+          <div class="field form-group full"><label for="profileInstagram">Instagram</label><input class="control" id="profileInstagram" type="text" placeholder="@usuario" value="${escapeHtml(person.instagram||'')}"></div>
+          <div class="field form-group"><label for="profilePassword">Nova senha</label><div class="password-wrap"><input class="control" id="profilePassword" type="password" autocomplete="new-password"><button class="password-toggle" type="button" onclick="togglePasswordVisibility('profilePassword',this)">Mostrar</button></div></div>
+          <div class="field form-group"><label for="profilePasswordConfirm">Confirmar nova senha</label><div class="password-wrap"><input class="control" id="profilePasswordConfirm" type="password" autocomplete="new-password"><button class="password-toggle" type="button" onclick="togglePasswordVisibility('profilePasswordConfirm',this)">Mostrar</button></div></div>
+        </div>
+        <div class="modal-actions"><button class="btn btn-ghost" type="button" onclick="closeModal('profileModal')">Cancelar</button><button class="btn btn-primary" type="button" onclick="saveOwnProfile()">Salvar perfil</button></div>`;
+      document.getElementById('profileModal').classList.add('open');
+    }
+    function openProfile(id) {
+      closeAccountMenu();
+      const person=cloudProfiles.find(item=>item.id===id); if(!person) return;
+      const phone=String(person.phone||'').replace(/\D/g,'');
+      const instagram=String(person.instagram||'').replace(/^@/,'');
+      document.getElementById('profileModalTitle').textContent=person.display_name||person.email;
+      document.getElementById('profileModalContent').innerHTML=`
+        <div class="profile-header"><span class="profile-avatar">${profileAvatar(person)}</span><div><h3>${escapeHtml(person.display_name||person.email)}</h3><p>${escapeHtml(person.email)}</p></div></div>
+        <div class="profile-contact-actions">
+          <button class="btn btn-ghost" type="button" onclick="copyProfileEmail('${escapeHtml(person.email)}')">E-mail</button>
+          <button class="btn btn-ghost" type="button" ${isValidPhone(phone)?`onclick="window.open('https://wa.me/55${phone}','_blank','noopener')"`:'disabled'}>WhatsApp</button>
+          <button class="btn btn-ghost" type="button" ${instagram?`onclick="window.open('https://instagram.com/${encodeURIComponent(instagram)}','_blank','noopener')"`:'disabled'}>Instagram</button>
+        </div>
+        <div class="modal-actions"><button class="btn btn-ghost" type="button" onclick="closeModal('profileModal')">Fechar</button></div>`;
+      document.getElementById('profileModal').classList.add('open');
+    }
+    function copyProfileEmail(email) {
+      navigator.clipboard?.writeText(email).then(()=>toast('E-mail copiado.')).catch(()=>toast('Não foi possível copiar o e-mail.'));
+    }
+    async function uploadProfilePhoto(file) {
+      if(!file) return;
+      if(!file.type.startsWith('image/')) return toast('Escolha uma imagem.');
+      if(file.size>5*1024*1024) return toast('A foto deve ter até 5 MB.');
+      const extension=(file.name.split('.').pop()||'jpg').toLowerCase();
+      const path=`${currentProfile.id}/avatar.${extension}`;
+      const {error}=await supabaseClient.storage.from('profile-avatars').upload(path,file,{upsert:true,contentType:file.type});
+      if(error) return toast('Não foi possível enviar a foto.');
+      const {data}=supabaseClient.storage.from('profile-avatars').getPublicUrl(path);
+      const {error:profileError}=await supabaseClient.from('profiles').update({avatar_url:data.publicUrl}).eq('id',currentProfile.id);
+      if(profileError) return toast('A foto foi enviada, mas não foi possível salvar no perfil.');
+      currentProfile={...currentProfile,avatar_url:data.publicUrl};
+      document.getElementById('profileAvatarPreview').innerHTML=profileAvatar(currentProfile);
+      await loadCloudData(); render(); toast('Foto atualizada.');
+    }
+    async function saveOwnProfile() {
+      const display_name=document.getElementById('profileDisplayName').value.trim();
+      const phone=document.getElementById('profilePhone').value.replace(/\D/g,'');
+      const instagram=document.getElementById('profileInstagram').value.trim().replace(/^@/,'');
+      const password=document.getElementById('profilePassword').value;
+      const confirmation=document.getElementById('profilePasswordConfirm').value;
+      if(!display_name) return toast('Informe o nome de usuário.');
+      if(phone && !isValidPhone(phone)) return toast('Informe o WhatsApp com DDD.');
+      if(password && password.length<6) return toast('A senha precisa ter ao menos 6 caracteres.');
+      if(password && password!==confirmation) return toast('As senhas não conferem.');
+      const {error}=await supabaseClient.from('profiles').update({display_name,phone:phone||null,instagram:instagram||null}).eq('id',currentProfile.id);
+      if(error) return toast('Não foi possível salvar o perfil.');
+      if(password) {
+        const {error:passwordError}=await supabaseClient.auth.updateUser({password});
+        if(passwordError) return toast('Perfil salvo, mas não foi possível alterar a senha.');
+      }
+      currentProfile={...currentProfile,display_name,phone:phone||null,instagram:instagram||null};
+      closeModal('profileModal'); await loadCloudData(); render(); toast('Perfil atualizado.');
+    }
     async function signOut() {
       if(!supabaseClient) return;
       await supabaseClient.auth.signOut();
       currentProfile=null; cloudClients=[]; cloudPosts=[]; cloudActivities=[];
       document.getElementById('authPassword').value='';
-      document.getElementById('authScreen').classList.remove('hidden');
+      const auth=document.getElementById('authScreen'); auth.classList.remove('hidden','auth-checking');
     }
 
     async function loadCloudData() {
@@ -1086,7 +1221,7 @@
         supabaseClient.from('posts').select('*').order('updated_at',{ascending:false}),
         supabaseClient.from('custom_cards').select('*').order('created_at',{ascending:false}),
         supabaseClient.from('activity_log').select('*').order('created_at',{ascending:false}).limit(100),
-        supabaseClient.from('profiles').select('id,display_name,email,role,active'),
+        supabaseClient.from('profiles').select('id,display_name,email,phone,instagram,avatar_url,role,active'),
         supabaseClient.from('activity_reads').select('last_read_at').eq('user_id',currentProfile.id).maybeSingle()
       ]);
       if(clientsResult.error || postsResult.error || cardsResult.error || activitiesResult.error) throw new Error('Não foi possível carregar os dados compartilhados.');
@@ -1116,21 +1251,22 @@
       if(!window.supabase || SUPABASE_URL.startsWith('__')) return;
       if(!supabaseClient) supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
       const {data:{session}}=await supabaseClient.auth.getSession();
-      if(!session) { document.getElementById('authScreen').classList.remove('hidden'); return; }
-      if(location.hash.includes('type=recovery')) { showPasswordRecovery(); return; }
+      const authScreen=document.getElementById('authScreen');
+      if(!session) { authScreen.classList.remove('hidden','auth-checking'); return; }
+      if(location.hash.includes('type=recovery')) { authScreen.classList.remove('auth-checking'); showPasswordRecovery(); return; }
       const {data:profile,error}=await supabaseClient.from('profiles').select('*').eq('id',session.user.id).maybeSingle();
-      if(error || !profile || !profile.active) { await supabaseClient.auth.signOut(); document.getElementById('authError').textContent='Este acesso não está ativo.'; document.getElementById('authScreen').classList.remove('hidden'); return; }
+      if(error || !profile || !profile.active) { await supabaseClient.auth.signOut(); document.getElementById('authError').textContent='Este acesso não está ativo.'; authScreen.classList.remove('hidden','auth-checking'); return; }
       currentProfile=profile;
       try {
         await loadCloudData();
         await migrateLocalData();
         await loadCloudData();
-        document.getElementById('accountButton').textContent='Sair';
-        document.getElementById('authScreen').classList.add('hidden');
+        authScreen.classList.add('hidden');
+        authScreen.classList.remove('auth-checking');
         render();
         subscribeToChanges();
         await updateAutomaticStatuses();
-      } catch(error) { document.getElementById('authError').textContent='A base foi criada, mas não foi possível carregar os dados.'; document.getElementById('authScreen').classList.remove('hidden'); }
+      } catch(error) { document.getElementById('authError').textContent='A base foi criada, mas não foi possível carregar os dados.'; authScreen.classList.remove('hidden','auth-checking'); }
     }
 
     function subscribeToChanges() {
@@ -1140,6 +1276,7 @@
         .on('postgres_changes',{event:'*',schema:'public',table:'posts'},refreshFromRealtime)
         .on('postgres_changes',{event:'*',schema:'public',table:'custom_cards'},refreshFromRealtime)
         .on('postgres_changes',{event:'*',schema:'public',table:'activity_log'},refreshFromRealtime)
+        .on('postgres_changes',{event:'*',schema:'public',table:'profiles'},refreshFromRealtime)
         .subscribe();
     }
     let realtimeTimer;
@@ -1343,7 +1480,8 @@
     function render() { updateAutomaticStatuses(); renderNav(); populateFilterOptions(); renderFilterControls(); renderMainContent(); renderCustomCards(); renderAccessManagement(); renderNotificationCount(); updateLiveClock(); }
 
     document.querySelectorAll('.modal-overlay').forEach(overlay=>overlay.addEventListener('click',event=>{ if(event.target===overlay) closeModal(overlay.id); }));
-    document.addEventListener('keydown',event=>{ if(event.key==='Escape') document.querySelectorAll('.modal-overlay.open').forEach(modal=>closeModal(modal.id)); });
+    document.addEventListener('click',event=>{ const menu=document.getElementById('accountMenu'), button=document.getElementById('accountButton'); if(menu?.classList.contains('open') && !menu.contains(event.target) && event.target!==button) closeAccountMenu(); });
+    document.addEventListener('keydown',event=>{ if(event.key==='Escape') { document.querySelectorAll('.modal-overlay.open').forEach(modal=>closeModal(modal.id)); closeAccountMenu(); } });
     initializeApp(); setInterval(updateAutomaticStatuses,60000); setInterval(updateLiveClock,1000);
   </script>
 </body>
