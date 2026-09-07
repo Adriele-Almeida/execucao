@@ -296,6 +296,45 @@
       .activity-item { font-size:16px; }
     }
 
+
+    /* Hierarquia final: desktop e celular */
+    .header-clock { position:absolute; top:10px; left:50%; transform:translateX(-50%); color:var(--muted); font:600 13px 'Exo 2',sans-serif; letter-spacing:.45px; white-space:nowrap; pointer-events:none; }
+    @media (max-width:760px) {
+      header { min-height:96px; padding:30px 14px 11px; }
+      .header-clock { top:8px; font-size:12px; letter-spacing:.25px; }
+      .brand h1 { font-size:14px; letter-spacing:1.5px; }
+      .brand p { margin-top:3px; font-size:11px; letter-spacing:.8px; }
+      .header-actions .btn,.account-button { min-height:36px; padding:7px 8px; font-size:10px; }
+      .icon-btn { width:38px; height:38px; }
+      .sidebar { top:96px; }
+      .app-shell { min-height:calc(100vh - 96px); }
+      .nav-button { padding:9px 13px; font-size:15px; }
+      main { padding:16px 12px 28px; }
+      .page-heading h2 { font-size:20px; }
+      .page-heading p { font-size:15px; }
+      .filter-toggle { min-height:40px; padding:8px 12px; font-size:14px; }
+      .field label { font-size:12px; }
+      .control { min-height:42px; padding:8px 10px; font-size:15px; }
+      .btn { min-height:40px; font-size:13px; }
+      .summary-value { font-size:25px; }
+      .summary-name { font-size:13px; }
+      .section-heading h3 { font-size:15px; }
+      .section-heading span { font-size:13px; }
+      .calendar-toolbar { padding:11px 10px; gap:8px; }
+      .calendar-title { font-size:18px; }
+      .calendar-toolbar > .btn { min-height:36px; padding:5px 11px; font-size:16px; }
+      .calendar-toolbar .view-buttons .btn { min-height:40px; padding:6px 4px; font-size:14px; }
+      .calendar-weekday { padding:7px 2px; font-size:11px; }
+      .calendar-day { min-height:76px; padding:4px; }
+      .day-number { font-size:14px; }
+      .calendar-event { min-height:22px; margin-top:4px; padding:3px 4px; font-size:12px; line-height:16px; white-space:nowrap; text-overflow:ellipsis; }
+      .quick-filter { min-height:35px; padding:6px 12px; font-size:13px; }
+      td[data-label="Cliente"],td[data-label="Data"],td,.client-meta { font-size:15px; }
+      .badge { font-size:12px; }
+      .post-title { font-size:18px; }
+      .activity-item { font-size:15px; }
+    }
+
   </style>
 </head>
 <body>
@@ -304,6 +343,7 @@
       <h1>ORDEM DE EXECUÇÃO</h1>
       <p>Dashboard Estratégico</p>
     </button>
+    <div class="header-clock" id="headerClock" aria-label="Data e horário atual"></div>
     <div class="header-actions">
       <button class="btn btn-primary" type="button" onclick="openPostModal()">Nova postagem</button>
       <button class="btn btn-ghost" type="button" onclick="openClientModal()">Novo cliente</button>
@@ -320,7 +360,6 @@
 
     <main>
       <section class="activity-panel" id="activityPanel"></section>
-      <div class="live-clock" id="liveClock"></div>
 
       <div class="page-header">
         <div class="page-heading">
@@ -1244,10 +1283,9 @@
       await loadCloudData(); render(); toast('Histórico limpo.');
     }
     function updateLiveClock() {
-      const clock=document.getElementById('liveClock');
-      if(state.view!=='Painel') { clock.classList.add('hidden'); return; }
+      const clock=document.getElementById('headerClock');
       const now=new Date(), day=String(now.getDate()).padStart(2,'0'), month=MONTHS[now.getMonth()], time=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-      clock.textContent=`${day} ${month} ${now.getFullYear()} | ${time}`; clock.classList.remove('hidden');
+      clock.textContent=`${day} ${month} ${now.getFullYear()} | ${time}`;
     }
     function render() { updateAutomaticStatuses(); renderNav(); populateFilterOptions(); renderFilterControls(); renderMainContent(); renderCustomCards(); renderAccessManagement(); renderNotificationCount(); updateLiveClock(); }
 
