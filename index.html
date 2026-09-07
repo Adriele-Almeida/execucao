@@ -863,9 +863,20 @@
 
     function cloudReady() { return Boolean(supabaseClient && currentProfile); }
 
+    function registrationMode() {
+      const params=new URLSearchParams(location.search);
+      if(params.get('primeiro-acesso')==='1') return 'initial';
+      if(params.get('novo-acesso')==='1') return 'request';
+      return '';
+    }
+
     function showInitialAccess() {
       document.querySelector('#authScreen form:first-child').classList.add('hidden');
       document.getElementById('initialAccessForm').classList.remove('hidden');
+      const requesting=registrationMode()==='request';
+      document.querySelector('#initialAccessForm .auth-brand').textContent=requesting?'SOLICITAR ACESSO':'PRIMEIRO ACESSO';
+      document.querySelector('#initialAccessForm p').textContent=requesting?'Cadastre seus dados. A administradora precisará ativar seu acesso antes da entrada.':'Crie o acesso da administradora da base operacional.';
+      document.getElementById('setupSubmit').textContent=requesting?'Solicitar acesso':'Criar acesso';
     }
 
     function showSignIn() {
@@ -882,9 +893,11 @@
         password:document.getElementById('setupPassword').value,
         options:{data:{display_name:document.getElementById('setupName').value.trim()}}
       });
-      submit.disabled=false; submit.textContent='Criar acesso';
+      submit.disabled=false; submit.textContent=registrationMode()==='request'?'Solicitar acesso':'Criar acesso';
       if(signUpError) { error.textContent='Não foi possível criar este acesso. Confira os dados e tente novamente.'; return; }
-      if(!data.session) { error.style.color='var(--green)'; error.textContent='Acesse o e-mail informado e confirme o cadastro. Depois volte para entrar.'; return; }
+      const requesting=registrationMode()==='request';
+      if(!data.session) { error.style.color='var(--green)'; error.textContent=requesting?'Acesse o e-mail informado para confirmar. Depois aguarde a ativação da administradora.':'Acesse o e-mail informado e confirme o cadastro. Depois volte para entrar.'; return; }
+      if(requesting) { await supabaseClient.auth.signOut(); showSignIn(); document.getElementById('authError').style.color='var(--green)'; document.getElementById('authError').textContent='Solicitação registrada. Aguarde a ativação da administradora.'; return; }
       await initializeApp();
     }
 
@@ -942,7 +955,9 @@
       if(!supabaseClient) supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
       const {data:{session}}=await supabaseClient.auth.getSession();
       if(!session) {
-        document.getElementById('initialAccessButton').classList.toggle('hidden',new URLSearchParams(location.search).get('primeiro-acesso')!=='1');
+        const mode=registrationMode(), setupButton=document.getElementById('initialAccessButton');
+        setupButton.classList.toggle('hidden',!mode);
+        setupButton.textContent=mode==='request'?'Solicitar acesso':'Criar acesso inicial';
         document.getElementById('authScreen').classList.remove('hidden'); return;
       }
       const {data:profile,error}=await supabaseClient.from('profiles').select('*').eq('id',session.user.id).maybeSingle();
