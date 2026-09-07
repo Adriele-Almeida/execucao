@@ -370,7 +370,12 @@
     .history-clear-list { max-height:240px; overflow:auto; border:1px solid var(--border); border-radius:6px; margin:10px 0; }
     .history-clear-list .activity-item { cursor:pointer; }
 
-  </style>
+  
+    /* Fase 4: identificação dos eventos por cliente, sem perder legibilidade no celular */
+    .calendar-event { border-left-color:var(--client-color,var(--cyan)); font-size:12px; line-height:1.25; }
+    .custom-date-inputs { display:grid; grid-template-columns:1fr 1fr; gap:8px; width:100%; }
+    @media (max-width:760px) { .calendar-event { margin-top:3px; padding:3px 4px; font-size:10px; min-height:20px; } .custom-date-inputs { grid-template-columns:1fr; } }
+</style>
 </head>
 <body>
   <header>
@@ -538,7 +543,8 @@
         <div class="field form-group"><label for="pStatus">Etapa</label><select class="control" id="pStatus" onchange="toggleScheduleFields()"><option value="">Selecione a etapa</option><option>Criar</option><option>Conferir</option><option>Refinar</option><option>Programado</option><option>Publicado</option></select></div>
         <div class="field form-group"><label for="pType">Tipo</label><select class="control" id="pType"><option value="">Selecione o tipo</option><option>Carrossel</option><option>Post</option><option>Story</option><option>Reels</option></select></div>
         <div class="field form-group"><label for="pDate">Data</label><input class="control" id="pDate" type="date"></div>
-        <div class="field form-group hidden" id="timeField"><label for="pTime">Horário</label><input class="control" id="pTime" type="time"></div>
+        <div class="field form-group"><label for="pTime">Horário</label><input class="control" id="pTime" type="time"></div>
+        <div class="field form-group full"><label for="pTheme">Tema</label><input class="control" id="pTheme" type="text"></div>
         <div class="field form-group full"><label for="pCanva">Link da arte</label><input class="control" id="pCanva" type="url" placeholder="https://"></div>
         <div class="field form-group full"><label for="pCaption">Legenda</label><div class="caption-wrap"><textarea class="control" id="pCaption"></textarea><button class="btn btn-ghost caption-copy" type="button" onclick="copyCaption()">Copiar</button></div></div>
         <div class="field form-group full"><label for="pNotes">Observações</label><textarea class="control" id="pNotes"></textarea></div>
@@ -825,7 +831,8 @@
       body.innerHTML=posts.map(post=>{
         const client=clients.find(item=>item.id===post.clientId);
         const art=safeUrl(post.canva);
-        return `<tr class="post-row" onclick="openPostModal('${post.id}')"><td data-label="Data">${formatDate(post.date)}${post.hora?` · ${escapeHtml(post.hora)}`:''}</td><td data-label="Cliente">${escapeHtml(client?.name||'Cliente removido')}</td><td data-label="Tema"><div class="post-title">${escapeHtml(post.title)}</div>${post.notes?`<small>${escapeHtml(post.notes)}</small>`:''}</td><td data-label="Tipo">${escapeHtml(post.type||'')}</td><td data-label="Status"><span class="badge ${slugStatus(post.status)}">${escapeHtml(post.status)}</span></td><td data-label="Arte">${art?`<a href="${art}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Abrir arte</a>`:'Sem link'}</td></tr>`;
+        const color=client?.color||'var(--cyan)';
+        return `<tr class="post-row" style="box-shadow:inset 4px 0 0 ${escapeHtml(color)}" onclick="openPostModal('${post.id}')"><td data-label="Data">${formatDate(post.date)}${post.hora?` · ${escapeHtml(post.hora)}`:''}</td><td data-label="Cliente" style="color:${escapeHtml(color)}">${escapeHtml(client?.name||'Cliente removido')}</td><td data-label="Tema"><div class="post-title">${escapeHtml(post.title||'')}</div>${post.notes?`<small>${escapeHtml(post.notes)}</small>`:''}</td><td data-label="Tipo">${escapeHtml(post.type||'')}</td><td data-label="Status"><span class="badge ${slugStatus(post.status)}">${escapeHtml(post.status)}</span></td><td data-label="Arte">${art?`<a href="${art}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Abrir arte</a>`:'Sem link'}</td></tr>`;
       }).join('');
     }
 
@@ -904,7 +911,9 @@
 
     function calendarEvent(post,clients) {
       const client=clients.find(item=>item.id===post.clientId);
-      return `<button class="calendar-event" type="button" onclick="openPostModal('${post.id}')" title="${escapeHtml(client?.name||'')}: ${escapeHtml(post.title)}">${escapeHtml(post.hora||'')} ${escapeHtml(post.title)}</button>`;
+      const label=[client?.name,post.title].filter(Boolean).join(' — ');
+      const color=client?.color||'var(--cyan)';
+      return `<button class="calendar-event" style="--client-color:${escapeHtml(color)}" type="button" onclick="openPostModal('${post.id}')" title="${escapeHtml(label)}">${post.hora?`${escapeHtml(post.hora)} · `:''}${escapeHtml(label||'Postagem')}</button>`;
     }
 
     function renderMonthCalendar() {
@@ -937,7 +946,7 @@
       const key=dateKey(calendarDate), posts=calendarPosts().filter(post=>post.date===key).sort((a,b)=>(a.hora||'').localeCompare(b.hora||'')), clients=getClients();
       document.getElementById('calendarTitle').textContent=`${SHORT_DAYS[calendarDate.getDay()]}, ${calendarDate.getDate()} de ${MONTHS[calendarDate.getMonth()]} de ${calendarDate.getFullYear()}`;
       const grid=document.getElementById('calendarGrid'); grid.className='day-list';
-      grid.innerHTML=posts.length?posts.map(post=>{ const client=clients.find(item=>item.id===post.clientId); return `<button class="day-event" style="width:100%;border:0;background:transparent;color:inherit;text-align:left" type="button" onclick="openPostModal('${post.id}')"><strong>${escapeHtml(post.hora||'Sem hora')}</strong><span>${escapeHtml(post.title)}<br><small>${escapeHtml(client?.name||'')}</small></span><span class="badge status-programado">Programado</span></button>`; }).join(''):`<div class="empty-state"><strong>Nenhuma postagem programada</strong><button class="btn btn-primary btn-small" type="button" onclick="openPostModal(null,'','${key}')">Programar neste dia</button></div>`;
+      grid.innerHTML=posts.length?posts.map(post=>{ const client=clients.find(item=>item.id===post.clientId), color=client?.color||'var(--cyan)'; return `<button class="day-event" style="width:100%;border:0;border-left:4px solid ${escapeHtml(color)};background:transparent;color:inherit;text-align:left" type="button" onclick="openPostModal('${post.id}')"><strong>${escapeHtml(post.hora||'Sem hora')}</strong><span>${escapeHtml(client?.name||'Cliente removido')}${post.title?` — ${escapeHtml(post.title)}`:''}</span><span class="badge ${slugStatus(post.status)}">${escapeHtml(post.status)}</span></button>`; }).join(''):`<div class="empty-state"><strong>Nenhuma postagem nesta data</strong><button class="btn btn-primary btn-small" type="button" onclick="openPostModal(null,'','${key}')">Criar neste dia</button></div>`;
     }
 
     function openPostModal(id=null,defaultStatus='',defaultDate='') {
@@ -950,6 +959,7 @@
       document.getElementById('pClient').value=post?.clientId||'';
       document.getElementById('pStatus').value=post?.status||defaultStatus;
       document.getElementById('pType').value=post?.type||'';
+      document.getElementById('pTheme').value=post?.title||'';
       document.getElementById('pDate').value=post?.date||defaultDate||'';
       document.getElementById('pTime').value=post?.hora||'';
       document.getElementById('pCanva').value=post?.canva||'';
@@ -959,17 +969,17 @@
       toggleScheduleFields(); document.getElementById('postModal').classList.add('open');
     }
 
-    function toggleScheduleFields() { document.getElementById('timeField').classList.toggle('hidden',document.getElementById('pStatus').value!=='Programado'); }
+    function toggleScheduleFields() { document.getElementById('timeField')?.classList.remove('hidden'); }
     function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
     function savePost() {
-      const title='', status=document.getElementById('pStatus').value;
+      const title=document.getElementById('pTheme').value.trim()||null, status=document.getElementById('pStatus').value;
       const clientId=document.getElementById('pClient').value, date=document.getElementById('pDate').value, hora=document.getElementById('pTime').value;
       if(!clientId) return toast('Selecione um cliente.');
       if(!status) return toast('Selecione a etapa.');
       if(status==='Programado' && (!date||!hora)) return toast('Postagem programada precisa de data e horário.');
       const posts=getPosts();
-      const record={id:editingPostId||String(Date.now()),title,clientId,status,type:document.getElementById('pType').value,date,hora:status==='Programado'?hora:'',canva:document.getElementById('pCanva').value.trim(),legenda:document.getElementById('pCaption').value.trim(),notes:document.getElementById('pNotes').value.trim(),updatedAt:Date.now()};
+      const record={id:editingPostId||String(Date.now()),title,clientId,status,type:document.getElementById('pType').value,date,hora:hora||'',canva:document.getElementById('pCanva').value.trim(),legenda:document.getElementById('pCaption').value.trim(),notes:document.getElementById('pNotes').value.trim(),updatedAt:Date.now()};
       if(editingPostId) { const index=posts.findIndex(item=>item.id===editingPostId); posts[index]=record; logActivity(`Postagem “${title}” atualizada`); }
       else { posts.push(record); logActivity(`Postagem “${title}” criada em ${status}`); }
       savePosts(posts); closeModal('postModal'); editingPostId=null; render(); toast('Postagem salva.');
@@ -1310,12 +1320,12 @@
     function refreshFromRealtime() { clearTimeout(realtimeTimer); realtimeTimer=setTimeout(async()=>{ await loadCloudData(); render(); },250); }
 
     async function savePost() {
-      const title='', status=document.getElementById('pStatus').value;
+      const title=document.getElementById('pTheme').value.trim()||null, status=document.getElementById('pStatus').value;
       const clientId=document.getElementById('pClient').value, date=document.getElementById('pDate').value, hora=document.getElementById('pTime').value;
       if(!clientId) return toast('Selecione um cliente.');
       if(!status) return toast('Selecione a etapa.');
       if(status==='Programado' && (!date||!hora)) return toast('Postagem programada precisa de data e horário.');
-      const payload={title,client_id:clientId,status,type:document.getElementById('pType').value||null,post_date:date||null,post_time:status==='Programado'?hora:null,canva:document.getElementById('pCanva').value.trim()||null,legenda:document.getElementById('pCaption').value.trim()||null,notes:document.getElementById('pNotes').value.trim()||null,automatic_status_update:false,updated_by:currentProfile.id};
+      const payload={title,client_id:clientId,status,type:document.getElementById('pType').value||null,post_date:date||null,post_time:hora||null,canva:document.getElementById('pCanva').value.trim()||null,legenda:document.getElementById('pCaption').value.trim()||null,notes:document.getElementById('pNotes').value.trim()||null,automatic_status_update:false,updated_by:currentProfile.id};
       const result=editingPostId ? await supabaseClient.from('posts').update(payload).eq('id',editingPostId) : await supabaseClient.from('posts').insert({...payload,created_by:currentProfile.id});
       if(result.error) return toast('Não foi possível salvar a postagem.');
       closeModal('postModal'); editingPostId=null; await loadCloudData(); render(); toast('Postagem salva.');
@@ -1414,17 +1424,21 @@
       else { const el=document.getElementById('pCaption'); el.select(); document.execCommand('copy'); toast('Legenda copiada.'); }
     }
 
+    function splitCardDateValue(value='') { const [date='',time='']=String(value).split('|'); return {date,time}; }
     function renderCustomCardFields() {
       const holder=document.getElementById('customCardFields');
       holder.innerHTML=cardFields.map(field=>{
         const input=field.type==='text'
           ? `<textarea class="control" placeholder="Texto" oninput="updateCustomCardField('${field.id}',this.value)">${escapeHtml(field.value||'')}</textarea>`
-          : `<input class="control" type="${field.type==='date'?'date':'url'}" placeholder="${field.type==='link'?'https://':''}" value="${escapeHtml(field.value||'')}" oninput="updateCustomCardField('${field.id}',this.value)">`;
+          : field.type==='date'
+            ? (()=>{ const value=splitCardDateValue(field.value); return `<div class="custom-date-inputs"><input class="control" type="date" value="${escapeHtml(value.date)}" onchange="updateCustomCardDateField('${field.id}','date',this.value)"><input class="control" type="time" value="${escapeHtml(value.time)}" onchange="updateCustomCardDateField('${field.id}','time',this.value)"></div>`; })()
+            : `<input class="control" type="url" placeholder="https://" value="${escapeHtml(field.value||'')}" oninput="updateCustomCardField('${field.id}',this.value)">`;
         return `<div class="custom-field-row">${input}<button class="btn btn-danger btn-small" type="button" onclick="removeCustomCardField('${field.id}')">Remover</button></div>`;
       }).join('');
     }
     function addCustomCardField(type) { cardFields.push({id:`${Date.now()}-${Math.random()}`,type,value:''}); renderCustomCardFields(); }
     function updateCustomCardField(id,value) { const field=cardFields.find(item=>item.id===id); if(field) field.value=value; }
+    function updateCustomCardDateField(id,part,value) { const field=cardFields.find(item=>item.id===id); if(!field) return; const parsed=splitCardDateValue(field.value); parsed[part]=value; field.value=parsed.date+(parsed.time?'|'+parsed.time:''); }
     function removeCustomCardField(id) { cardFields=cardFields.filter(item=>item.id!==id); renderCustomCardFields(); }
     function stageLabel(stage='criar') { return ({criar:'Criar',conferir:'Conferir',refinar:'Refinar'})[stage]||'Criar'; }
     function getCardClient(card) { return getClients().find(client=>client.id===card.client_id)||null; }
@@ -1466,7 +1480,7 @@
       const grid=document.getElementById('customCardsGrid'), cards=inClient?cloudCards.filter(card=>card.client_id===state.clientId):cloudCards.filter(card=>(card.stage||'criar')===cardStage);
       grid.innerHTML=cards.length?cards.map(renderCardSummary).join(''):`<div class="empty-state"><strong>Nenhum card em ${stageLabel(cardStage)}</strong><span>Use “Novo card” para registrar um item.</span></div>`;
     }
-    function cardFieldsHtml(card) { return (card.fields||[]).map(field=>{ if(field.type==='link') { const url=safeUrl(field.value); return url?`<p><a href="${url}" target="_blank" rel="noopener">Abrir link</a></p>`:''; } return `<p>${field.type==='date'?formatDate(field.value):escapeHtml(field.value)}</p>`; }).join(''); }
+    function cardFieldsHtml(card) { return (card.fields||[]).map(field=>{ if(field.type==='link') { const url=safeUrl(field.value); return url?`<p><a href="${url}" target="_blank" rel="noopener">Abrir link</a></p>`:''; } if(field.type==='date') { const value=splitCardDateValue(field.value); return value.date?`<p>${formatDate(value.date)}${value.time?` · ${escapeHtml(value.time)}`:''}</p>`:''; } return `<p>${escapeHtml(field.value)}</p>`; }).join(''); }
     function openCardDetail(cardId) {
       const card=cloudCards.find(item=>item.id===cardId); if(!card) return;
       const client=getCardClient(card),owner=cardOwner(card),responsible=cloudProfiles.find(person=>person.id===card.responsible_id),color=client?.color||'var(--cyan)',updates=cloudCardUpdates.filter(item=>item.card_id===card.id),canEdit=canEditCardOrientation(card);
