@@ -170,7 +170,7 @@ returns boolean language sql stable security definer set search_path = public as
 $$;
 
 drop policy if exists "authenticated can view profiles" on public.profiles;
-create policy "authenticated can view profiles" on public.profiles for select to authenticated using (active = true or id = auth.uid());
+create policy "authenticated can view profiles" on public.profiles for select to authenticated using (active = true or id = auth.uid() or public.is_admin());
 drop policy if exists "admins can update profiles" on public.profiles;
 create policy "admins can update profiles" on public.profiles for update to authenticated using (public.is_admin()) with check (public.is_admin());
 
