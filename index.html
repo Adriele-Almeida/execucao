@@ -259,6 +259,43 @@
       .live-clock { font-size:17px; }
     }
 
+
+    /* Leitura móvel: escala própria, sem ampliar elementos que não cabem na grade */
+    @media (max-width:760px) {
+      .brand h1 { font-size:15px; letter-spacing:1.8px; }
+      .brand p { font-size:12px; letter-spacing:1px; }
+      .header-actions { gap:6px; }
+      .header-actions .btn { min-height:38px; padding:8px 10px; font-size:11px; }
+      .account-button { min-height:38px; padding:8px 10px; font-size:11px; }
+      .nav-button { padding:10px 14px; font-size:16px; }
+      .page-heading h2 { font-size:22px; }
+      .page-heading p { font-size:16px; }
+      .live-clock { margin:0 0 18px; font-size:19px; }
+      .filter-toggle { min-height:44px; padding:9px 14px; font-size:15px; }
+      .filter-panel { gap:12px; }
+      .field label { font-size:13px; }
+      .control { min-height:46px; padding:10px 12px; font-size:16px; }
+      .btn { min-height:42px; font-size:14px; }
+      .summary-value { font-size:28px; }
+      .summary-name { font-size:14px; }
+      .section-heading h3 { font-size:16px; }
+      .section-heading span { font-size:14px; }
+      .calendar-toolbar { padding:14px 12px; gap:10px; }
+      .calendar-title { width:100%; min-width:0; font-size:20px; }
+      .calendar-toolbar > .btn { min-height:40px; padding:7px 13px; font-size:18px; }
+      .calendar-toolbar .view-buttons { width:100%; display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:0; }
+      .calendar-toolbar .view-buttons .btn { min-height:46px; padding:8px 4px; font-size:15px; letter-spacing:.3px; }
+      .calendar-weekday { padding:9px 2px; font-size:12px; }
+      .calendar-day { min-height:96px; padding:5px; }
+      .day-number { font-size:15px; }
+      .calendar-event { min-height:25px; margin-top:5px; padding:4px 5px; font-size:13px; line-height:17px; white-space:nowrap; text-overflow:ellipsis; }
+      .quick-filter { min-height:38px; padding:7px 13px; font-size:14px; }
+      td[data-label="Cliente"],td[data-label="Data"],td,.client-meta { font-size:16px; }
+      .badge { font-size:13px; }
+      .post-title { font-size:19px; }
+      .activity-item { font-size:16px; }
+    }
+
   </style>
 </head>
 <body>
