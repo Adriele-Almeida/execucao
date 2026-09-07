@@ -375,6 +375,42 @@
     .calendar-event { border-left-color:var(--client-color,var(--cyan)); font-size:12px; line-height:1.25; }
     .custom-date-inputs { display:grid; grid-template-columns:1fr 1fr; gap:8px; width:100%; }
     @media (max-width:760px) { .calendar-event { margin-top:3px; padding:3px 4px; font-size:10px; min-height:20px; } .custom-date-inputs { grid-template-columns:1fr; } }
+
+    /* Fase 5 e 6: leitura consistente e controles de atualizações */
+    .notification-button svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+    .notification-button { position:relative; }
+    .notification-count { top:-6px; right:-6px; min-width:17px; height:17px; padding:0 4px; line-height:17px; font-size:10px; }
+    .activity-link { display:block; margin-top:6px; padding:0; border:0; background:none; color:var(--cyan); font:inherit; text-align:left; cursor:pointer; }
+    .demand-item strong { color:var(--text); }
+    .control { font-size:15px; }
+    .field label { font-size:12px; }
+    .btn { font-size:13px; }
+    .calendar-title { font-size:18px; }
+    .calendar-weekday { font-size:13px; }
+    .day-number { font-size:14px; }
+    .calendar-event { font-size:12px; }
+    .calendar-toolbar .view-buttons .btn { font-size:13px; }
+    @media (max-width:760px) {
+      header { flex-wrap:wrap; gap:8px; padding:10px 14px; }
+      .brand { min-width:0; }
+      .header-clock { order:3; flex-basis:100%; margin:0; text-align:center; font-size:12px; letter-spacing:.35px; }
+      .header-actions { margin-left:auto; gap:6px; }
+      .header-actions .btn { min-height:36px; padding:7px 9px; font-size:10px; }
+      .icon-btn,.account-button { width:36px; min-width:36px; height:36px; }
+      .nav-button { font-size:14px; padding:9px 13px; }
+      .page-heading h2 { font-size:19px; }
+      .page-heading p { font-size:14px; }
+      .control { min-height:44px; font-size:16px; }
+      .field label { font-size:13px; }
+      .btn { min-height:42px; font-size:13px; }
+      .summary-name { font-size:12px; }
+      .calendar-title { font-size:18px; }
+      .calendar-weekday { font-size:12px; }
+      .day-number { font-size:14px; }
+      .calendar-event { display:block; min-height:21px; padding:3px 4px; font-size:10px; line-height:1.25; }
+      .calendar-toolbar .view-buttons .btn { min-height:38px; font-size:13px; }
+      .activity-item { font-size:14px; }
+    }
 </style>
 </head>
 <body>
@@ -387,7 +423,7 @@
     <div class="header-actions">
       <button class="btn btn-primary" type="button" onclick="openPostModal()">Nova postagem</button>
       <button class="btn btn-ghost" type="button" onclick="openClientModal()">Novo cliente</button>
-      <button class="icon-btn" type="button" onclick="toggleActivity()" aria-label="Abrir atualizações">◇<span class="notification-count" id="notificationCount">0</span></button>
+      <button class="icon-btn notification-button" type="button" onclick="toggleActivity()" aria-label="Abrir atualizações"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path><path d="M10 22h4"></path></svg><span class="notification-count" id="notificationCount">0</span></button>
       <button class="account-button" id="accountButton" type="button" onclick="toggleAccountMenu()" aria-label="Abrir menu do perfil" title="Perfil">⋯</button>
     </div>
   </header>
@@ -511,10 +547,17 @@
           <article class="settings-card">
             <h3>Atualizações</h3>
             <p>Opções exclusivas da administradora para as notificações e o histórico.</p>
-            <div class="settings-actions">
-              <button class="btn btn-ghost" type="button" onclick="clearNotifications()">Limpar notificações</button>
+            <div class="danger-form">
+              <label for="notificationClearScope">Limpar notificações</label>
+              <select class="control" id="notificationClearScope" onchange="renderNotificationClearOptions()">
+                <option value="individual">Notificações selecionadas</option>
+                <option value="day">Por dia</option>
+                <option value="month">Por mês</option>
+                <option value="all">Todas as notificações</option>
+              </select>
+              <div id="notificationClearOptions"></div>
             </div>
-            <div class="danger-form" style="margin-top:14px">
+            <div class="danger-form" style="margin-top:18px">
               <label for="historyClearScope">Limpar histórico</label>
               <select class="control" id="historyClearScope" onchange="renderHistoryClearOptions()">
                 <option value="individual">Atualizações selecionadas</option>
@@ -859,6 +902,7 @@
       select.innerHTML='<option value="">Selecione o cliente</option>'+clients.map(client=>`<option value="${client.id}">${escapeHtml(client.name)}</option>`).join('');
       document.getElementById('deleteClientConfirmation').value='';
       document.getElementById('deleteClientButton').disabled=true;
+      renderNotificationClearOptions();
       renderHistoryClearOptions();
     }
 
@@ -1065,6 +1109,8 @@
     let editingCardId = null;
     let cardFields = [];
     let selectedHistoryIds = new Set();
+    let selectedNotificationIds = new Set();
+    let notificationDismissalIds = new Set();
     let cloudActivities = [];
     let cloudProfiles = [];
     let currentProfile = null;
@@ -1247,17 +1293,18 @@
     }
 
     async function loadCloudData() {
-      const [clientsResult,postsResult,cardsResult,cardUpdatesResult,cardNotificationsResult,activitiesResult,profilesResult,readsResult]=await Promise.all([
+      const [clientsResult,postsResult,cardsResult,cardUpdatesResult,cardNotificationsResult,activitiesResult,profilesResult,readsResult,dismissalsResult]=await Promise.all([
         supabaseClient.from('clients').select('*').order('name'),
         supabaseClient.from('posts').select('*').order('updated_at',{ascending:false}),
-        supabaseClient.from('custom_cards').select('*').order('created_at',{ascending:false}),
+        supabaseClient.from('custom_cards').select('*').order('created_at',{ascending:true}),
         supabaseClient.from('card_updates').select('*').order('created_at',{ascending:true}),
         supabaseClient.from('card_notifications').select('*').order('created_at',{ascending:false}),
         supabaseClient.from('activity_log').select('*').order('created_at',{ascending:false}).limit(100),
         supabaseClient.from('profiles').select('id,display_name,email,phone,instagram,avatar_url,role,active'),
-        supabaseClient.from('activity_reads').select('last_read_at').eq('user_id',currentProfile.id).maybeSingle()
+        supabaseClient.from('activity_reads').select('last_read_at').eq('user_id',currentProfile.id).maybeSingle(),
+        supabaseClient.from('notification_dismissals').select('activity_id').eq('user_id',currentProfile.id)
       ]);
-      if(clientsResult.error || postsResult.error || cardsResult.error || cardUpdatesResult.error || cardNotificationsResult.error || activitiesResult.error) throw new Error('Não foi possível carregar os dados compartilhados.');
+      if(clientsResult.error || postsResult.error || cardsResult.error || cardUpdatesResult.error || cardNotificationsResult.error || activitiesResult.error || dismissalsResult.error) throw new Error('Não foi possível carregar os dados compartilhados.');
       const people=new Map((profilesResult.data||[]).map(person=>[person.id,person]));
       cloudProfiles=profilesResult.data||[];
       cloudClients=(clientsResult.data||[]).map(mapClient);
@@ -1265,7 +1312,8 @@
       cloudCards=cardsResult.data||[];
       cloudCardUpdates=(cardUpdatesResult.data||[]).map(item=>({...item,author:people.get(item.author_id)||null}));
       cloudCardNotifications=cardNotificationsResult.data||[];
-      cloudActivities=(activitiesResult.data||[]).map(item=>({...item,actor:people.get(item.actor_id)}));
+      cloudActivities=uniqueActivities((activitiesResult.data||[]).map(item=>({...item,actor:people.get(item.actor_id)})));
+      notificationDismissalIds=new Set((dismissalsResult.data||[]).map(item=>item.activity_id));
       activityReadAt=readsResult.data?.last_read_at||null;
     }
 
@@ -1376,24 +1424,69 @@
       reader.readAsText(file); event.target.value='';
     }
 
+    function uniqueActivities(items) {
+      const seen=new Set();
+      return items.filter(item=>{
+        const key=[item.actor_id,item.action,item.entity_type,JSON.stringify(item.after_data||item.before_data||{}),item.created_at].join('|');
+        if(seen.has(key)) return false;
+        seen.add(key); return true;
+      });
+    }
     function activityText(item) {
       const name=item.after_data?.title||item.before_data?.title||item.after_data?.name||item.before_data?.name||'registro';
       const actor=item.actor?.display_name||item.actor?.email||'Uma usuária';
       const verb={insert:'criou',update:'atualizou',delete:'excluiu'}[item.action]||'alterou';
       return `${actor} ${verb} ${item.entity_type==='client'?'o cliente':'a postagem'} “${name}”`;
     }
-
+    function visibleNotificationActivities() {
+      return cloudActivities.filter(item=>item.actor_id!==currentProfile?.id && !notificationDismissalIds.has(item.id));
+    }
+    function unreadCardNotifications() {
+      return cloudCardNotifications.filter(item=>item.recipient_id===currentProfile?.id&&!item.read_at);
+    }
+    function renderNotificationCount() {
+      const unreadActivities=visibleNotificationActivities().filter(item=>!activityReadAt||new Date(item.created_at)>new Date(activityReadAt));
+      const unread=unreadActivities.length+unreadCardNotifications().length;
+      const count=document.getElementById('notificationCount');
+      count.textContent=String(Math.min(unread,99)); count.style.display=unread?'block':'none';
+    }
     async function toggleActivity() {
       const panel=document.getElementById('activityPanel'); panel.classList.toggle('open');
-      panel.innerHTML=`<div class="activity-header">ATUALIZAÇÕES</div>${cloudActivities.length?cloudActivities.map(item=>`<div class="activity-item">${escapeHtml(activityText(item))}<time>${new Date(item.created_at).toLocaleString('pt-BR')}</time></div>`).join(''):'<div class="activity-item">Nenhuma atualização registrada.</div>'}`;
-      if(panel.classList.contains('open')&&cloudReady()) { await supabaseClient.from('activity_reads').upsert({user_id:currentProfile.id,last_read_at:new Date().toISOString()}); activityReadAt=new Date().toISOString(); renderNotificationCount(); }
+      const demands=unreadCardNotifications();
+      const activities=visibleNotificationActivities();
+      panel.innerHTML=`<div class="activity-header">ATUALIZAÇÕES</div>${demands.map(item=>{const card=cloudCards.find(card=>card.id===item.card_id);return `<div class="activity-item demand-item"><strong>${item.type==='aprovacao'?'Aguardando sua aprovação':'Nova ordem de execução'}</strong><button type="button" class="activity-link" onclick="closeActivityAndOpenCard('${item.card_id}')">${escapeHtml(card?.title||'Abrir card')}</button><time>${new Date(item.created_at).toLocaleString('pt-BR')}</time></div>`;}).join('')}${activities.length?activities.map(item=>`<div class="activity-item">${escapeHtml(activityText(item))}<time>${new Date(item.created_at).toLocaleString('pt-BR')}</time></div>`).join(''):(demands.length?'':'<div class="activity-item">Nenhuma atualização registrada.</div>')}`;
+      if(panel.classList.contains('open')&&cloudReady()) {
+        const now=new Date().toISOString();
+        await supabaseClient.from('activity_reads').upsert({user_id:currentProfile.id,last_read_at:now});
+        if(demands.length) await supabaseClient.from('card_notifications').update({read_at:now}).eq('recipient_id',currentProfile.id).is('read_at',null);
+        activityReadAt=now; await loadCloudData(); renderNotificationCount();
+      }
     }
-
-    function renderNotificationCount() {
-      const unread=cloudActivities.filter(item=>item.actor_id!==currentProfile?.id && (!activityReadAt || new Date(item.created_at)>new Date(activityReadAt))).length;
-      const count=document.getElementById('notificationCount'); count.textContent=String(Math.min(unread,99)); count.style.display=unread?'block':'none';
+    function closeActivityAndOpenCard(cardId) { document.getElementById('activityPanel').classList.remove('open'); openView('Ordem de Execução'); setTimeout(()=>openCardDetail(cardId),0); }
+    function toggleNotificationItem(id,checked) { if(checked) selectedNotificationIds.add(id); else selectedNotificationIds.delete(id); }
+    function renderNotificationClearOptions() {
+      const scope=document.getElementById('notificationClearScope')?.value, holder=document.getElementById('notificationClearOptions');
+      if(!scope||!holder) return;
+      const activities=visibleNotificationActivities();
+      if(scope==='individual') {
+        holder.innerHTML=`<div class="history-clear-list">${activities.length?activities.map(item=>`<label class="activity-item" style="display:block"><input type="checkbox" onchange="toggleNotificationItem('${item.id}',this.checked)"> ${escapeHtml(activityText(item))}<time>${new Date(item.created_at).toLocaleString('pt-BR')}</time></label>`).join(''):'<div class="activity-item">Nenhuma notificação disponível.</div>'}</div><button class="btn btn-danger" type="button" onclick="clearNotifications()">Limpar selecionadas</button>`;
+      } else if(scope==='day') holder.innerHTML='<input class="control" id="notificationClearDay" type="date"><button class="btn btn-danger" type="button" onclick="clearNotifications()">Limpar dia</button>';
+      else if(scope==='month') holder.innerHTML='<input class="control" id="notificationClearMonth" type="month"><button class="btn btn-danger" type="button" onclick="clearNotifications()">Limpar mês</button>';
+      else holder.innerHTML='<button class="btn btn-danger" type="button" onclick="clearNotifications()">Limpar todas as notificações</button>';
     }
-
+    async function clearNotifications() {
+      const scope=document.getElementById('notificationClearScope')?.value;
+      let activities=visibleNotificationActivities(), label='';
+      if(scope==='individual') { if(!selectedNotificationIds.size) return toast('Selecione ao menos uma notificação.'); activities=activities.filter(item=>selectedNotificationIds.has(item.id)); label='as notificações selecionadas'; }
+      else if(scope==='day') { const value=document.getElementById('notificationClearDay').value; if(!value) return toast('Escolha o dia.'); activities=activities.filter(item=>item.created_at.slice(0,10)===value); label='as notificações deste dia'; }
+      else if(scope==='month') { const value=document.getElementById('notificationClearMonth').value; if(!value) return toast('Escolha o mês.'); activities=activities.filter(item=>item.created_at.slice(0,7)===value); label='as notificações deste mês'; }
+      else { label='todas as notificações'; }
+      if(!activities.length) return toast('Nenhuma notificação corresponde a essa escolha.');
+      if(!confirm(`Limpar ${label}? O histórico continuará preservado.`)) return;
+      const {error}=await supabaseClient.from('notification_dismissals').upsert(activities.map(item=>({user_id:currentProfile.id,activity_id:item.id})),{onConflict:'user_id,activity_id'});
+      if(error) return toast('Não foi possível limpar as notificações.');
+      selectedNotificationIds=new Set(); await loadCloudData(); render(); toast('Notificações limpas.');
+    }
     function renderAccessManagement() {
       const card=document.getElementById('accessManagementCard');
       if(state.view!=='Configurações' || currentProfile?.role!=='admin') { card.classList.add('hidden'); return; }
