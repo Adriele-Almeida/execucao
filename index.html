@@ -335,6 +335,10 @@
       .activity-item { font-size:15px; }
     }
 
+
+    .history-clear-list { max-height:240px; overflow:auto; border:1px solid var(--border); border-radius:6px; margin:10px 0; }
+    .history-clear-list .activity-item { cursor:pointer; }
+
   </style>
 </head>
 <body>
@@ -442,7 +446,7 @@
       </section>
 
       <section class="section hidden" id="customCardsSection">
-        <div class="section-heading"><h3>Cards</h3><button class="btn btn-primary" type="button" onclick="openCustomCardModal()">Novo card</button></div>
+        <div class="section-heading"><h3 id="customCardsHeading">Cards</h3><button class="btn btn-primary" type="button" onclick="openCustomCardModal(state.clientId)">Novo card</button></div>
         <div class="custom-cards" id="customCardsGrid"></div>
       </section>
 
@@ -471,7 +475,16 @@
             <p>Opções exclusivas da administradora para as notificações e o histórico.</p>
             <div class="settings-actions">
               <button class="btn btn-ghost" type="button" onclick="clearNotifications()">Limpar notificações</button>
-              <button class="btn btn-danger" type="button" onclick="clearHistory()">Limpar histórico</button>
+            </div>
+            <div class="danger-form" style="margin-top:14px">
+              <label for="historyClearScope">Limpar histórico</label>
+              <select class="control" id="historyClearScope" onchange="renderHistoryClearOptions()">
+                <option value="individual">Atualizações selecionadas</option>
+                <option value="day">Por dia</option>
+                <option value="month">Por mês</option>
+                <option value="all">Todo o histórico</option>
+              </select>
+              <div id="historyClearOptions"></div>
             </div>
           </article>
           <article class="settings-card hidden" id="accessManagementCard">
@@ -525,7 +538,8 @@
     <div class="modal">
       <div class="modal-title" id="customCardModalTitle">Novo card</div>
       <div class="form-grid">
-        <div class="field form-group full"><label for="cardClient">Vincular a cliente</label><select class="control" id="cardClient"><option value="">Tarefa interna</option></select></div>
+        <div class="field form-group full"><label for="cardTitle">Título</label><input class="control" id="cardTitle" type="text"></div>
+        <div class="field form-group full"><label for="cardClient">Vincular a cliente</label><select class="control" id="cardClient"><option value="">Sem vínculo com cliente</option></select></div>
         <div class="field form-group full"><label for="cardObservations">Observações</label><textarea class="control" id="cardObservations"></textarea></div>
         <div class="field form-group full"><label>Campos personalizados</label><div id="customCardFields"></div><div class="settings-actions" style="margin-top:10px"><button class="btn btn-ghost btn-small" type="button" onclick="addCustomCardField('text')">+ Texto</button><button class="btn btn-ghost btn-small" type="button" onclick="addCustomCardField('date')">+ Data</button><button class="btn btn-ghost btn-small" type="button" onclick="addCustomCardField('link')">+ Link</button></div></div>
       </div>
@@ -792,6 +806,7 @@
       select.innerHTML='<option value="">Selecione o cliente</option>'+clients.map(client=>`<option value="${client.id}">${escapeHtml(client.name)}</option>`).join('');
       document.getElementById('deleteClientConfirmation').value='';
       document.getElementById('deleteClientButton').disabled=true;
+      renderHistoryClearOptions();
     }
 
     function renderMainContent() {
@@ -990,6 +1005,7 @@
     let cloudPosts = [];
     let cloudCards = [];
     let cardFields = [];
+    let selectedHistoryIds = new Set();
     let cloudActivities = [];
     let cloudProfiles = [];
     let currentProfile = null;
@@ -1246,41 +1262,78 @@
     function addCustomCardField(type) { cardFields.push({id:`${Date.now()}-${Math.random()}`,type,value:''}); renderCustomCardFields(); }
     function updateCustomCardField(id,value) { const field=cardFields.find(item=>item.id===id); if(field) field.value=value; }
     function removeCustomCardField(id) { cardFields=cardFields.filter(item=>item.id!==id); renderCustomCardFields(); }
-    function openCustomCardModal() {
+    function openCustomCardModal(preselectedClientId='') {
       const select=document.getElementById('cardClient');
-      select.innerHTML='<option value="">Tarefa interna</option>'+getClients().map(client=>`<option value="${client.id}">${escapeHtml(client.name)}</option>`).join('');
+      select.innerHTML='<option value="">Sem vínculo com cliente</option>'+getClients().map(client=>`<option value="${client.id}">${escapeHtml(client.name)}</option>`).join('');
+      document.getElementById('cardTitle').value='';
+      document.getElementById('cardClient').value=preselectedClientId||'';
       document.getElementById('cardObservations').value=''; cardFields=[]; renderCustomCardFields();
       document.getElementById('customCardModal').classList.add('open');
     }
     async function saveCustomCard() {
+      const title=document.getElementById('cardTitle').value.trim();
+      if(!title) return toast('Informe o título do card.');
       const fields=cardFields.filter(field=>field.value.trim()).map(field=>({type:field.type,value:field.value.trim()}));
-      const {error}=await supabaseClient.from('custom_cards').insert({client_id:document.getElementById('cardClient').value||null,observations:document.getElementById('cardObservations').value.trim()||null,fields,created_by:currentProfile.id,updated_by:currentProfile.id});
+      const {error}=await supabaseClient.from('custom_cards').insert({title,client_id:document.getElementById('cardClient').value||null,observations:document.getElementById('cardObservations').value.trim()||null,fields,created_by:currentProfile.id,updated_by:currentProfile.id});
       if(error) return toast('Não foi possível salvar o card.');
       closeModal('customCardModal'); await loadCloudData(); render(); toast('Card salvo.');
     }
     function renderCustomCards() {
       const section=document.getElementById('customCardsSection');
-      if(state.view!=='Criar') { section.classList.add('hidden'); return; }
+      const inClient=state.view==='Todos' && Boolean(state.clientId);
+      if(state.view!=='Criar' && !inClient) { section.classList.add('hidden'); return; }
       section.classList.remove('hidden');
+      document.getElementById('customCardsHeading').textContent=inClient?'Criar':'Cards';
       const clients=getClients(), grid=document.getElementById('customCardsGrid');
-      grid.innerHTML=cloudCards.length?cloudCards.map(card=>{
-        const client=clients.find(item=>item.id===card.client_id);
+      const cards=inClient?cloudCards.filter(card=>card.client_id===state.clientId):cloudCards;
+      grid.innerHTML=cards.length?cards.map(card=>{
         const fields=(card.fields||[]).map(field=>{
           if(field.type==='link') { const url=safeUrl(field.value); return url?`<p><a href="${url}" target="_blank" rel="noopener">Abrir link</a></p>`:''; }
           return `<p>${field.type==='date'?formatDate(field.value):escapeHtml(field.value)}</p>`;
         }).join('');
-        return `<article class="custom-card"><h4>${escapeHtml(client?.name||'Tarefa interna')}</h4><time>Registrado em ${new Date(card.created_at).toLocaleString('pt-BR')}</time>${card.observations?`<p>${escapeHtml(card.observations)}</p>`:''}${fields}</article>`;
-      }).join(''):'<div class="empty-state"><strong>Nenhum card criado</strong><span>Use “Novo card” para registrar uma tarefa ou um card de cliente.</span></div>';
+        return `<article class="custom-card"><h4>${escapeHtml(card.title||'')}</h4><time>Registrado em ${new Date(card.created_at).toLocaleString('pt-BR')}</time>${card.observations?`<p>${escapeHtml(card.observations)}</p>`:''}${fields}</article>`;
+      }).join(''):'<div class="empty-state"><strong>Nenhum card para criar</strong><span>Use “Novo card” para registrar um item.</span></div>';
     }
     async function clearNotifications() {
       await supabaseClient.from('activity_reads').upsert({user_id:currentProfile.id,last_read_at:new Date().toISOString()});
       activityReadAt=new Date().toISOString(); renderNotificationCount(); toast('Notificações limpas.');
     }
+    function toggleHistoryItem(id,checked) {
+      if(checked) selectedHistoryIds.add(id); else selectedHistoryIds.delete(id);
+    }
+    function renderHistoryClearOptions() {
+      const scope=document.getElementById('historyClearScope')?.value;
+      const holder=document.getElementById('historyClearOptions');
+      if(!scope || !holder) return;
+      if(scope==='individual') {
+        holder.innerHTML=`<div class="history-clear-list">${cloudActivities.length?cloudActivities.map(item=>`<label class="activity-item" style="display:block"><input type="checkbox" onchange="toggleHistoryItem('${item.id}',this.checked)"> ${escapeHtml(activityText(item))}<time>${new Date(item.created_at).toLocaleString('pt-BR')}</time></label>`).join(''):'<div class="activity-item">Nenhuma atualização registrada.</div>'}</div><button class="btn btn-danger" type="button" onclick="clearHistory()">Limpar selecionadas</button>`;
+      } else if(scope==='day') {
+        holder.innerHTML='<input class="control" id="historyClearDay" type="date"><button class="btn btn-danger" type="button" onclick="clearHistory()">Limpar dia</button>';
+      } else if(scope==='month') {
+        holder.innerHTML='<input class="control" id="historyClearMonth" type="month"><button class="btn btn-danger" type="button" onclick="clearHistory()">Limpar mês</button>';
+      } else {
+        holder.innerHTML='<button class="btn btn-danger" type="button" onclick="clearHistory()">Limpar todo o histórico</button>';
+      }
+    }
     async function clearHistory() {
-      if(!confirm('Limpar todo o histórico de atualizações? Esta ação não pode ser desfeita.')) return;
-      const {error}=await supabaseClient.from('activity_log').delete().not('id','is',null);
+      const scope=document.getElementById('historyClearScope').value;
+      let query=supabaseClient.from('activity_log').delete(), label='';
+      if(scope==='individual') {
+        if(!selectedHistoryIds.size) return toast('Selecione ao menos uma atualização.');
+        query=query.in('id',[...selectedHistoryIds]); label='as atualizações selecionadas';
+      } else if(scope==='day') {
+        const value=document.getElementById('historyClearDay').value; if(!value) return toast('Escolha o dia.');
+        const start=new Date(`${value}T00:00:00-03:00`), end=new Date(start); end.setDate(end.getDate()+1);
+        query=query.gte('created_at',start.toISOString()).lt('created_at',end.toISOString()); label='as atualizações deste dia';
+      } else if(scope==='month') {
+        const value=document.getElementById('historyClearMonth').value; if(!value) return toast('Escolha o mês.');
+        const [year,month]=value.split('-').map(Number), nextMonth=month===12?1:month+1, nextYear=month===12?year+1:year;
+        query=query.gte('created_at',`${year}-${String(month).padStart(2,'0')}-01T00:00:00-03:00`).lt('created_at',`${nextYear}-${String(nextMonth).padStart(2,'0')}-01T00:00:00-03:00`); label='as atualizações deste mês';
+      } else { query=query.not('id','is',null); label='todo o histórico'; }
+      if(!confirm(`Limpar ${label}? Esta ação não pode ser desfeita.`)) return;
+      const {error}=await query;
       if(error) return toast('Não foi possível limpar o histórico.');
-      await loadCloudData(); render(); toast('Histórico limpo.');
+      selectedHistoryIds=new Set(); await loadCloudData(); render(); toast('Histórico limpo.');
     }
     function updateLiveClock() {
       const clock=document.getElementById('headerClock');
