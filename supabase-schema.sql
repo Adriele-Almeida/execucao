@@ -87,7 +87,7 @@ begin
     coalesce(new.email, ''),
     coalesce(new.raw_user_meta_data ->> 'display_name', split_part(coalesce(new.email, ''), '@', 1)),
     case when is_first_user then 'admin' else 'user' end,
-    is_first_user
+    true
   );
   insert into public.activity_reads (user_id) values (new.id);
   return new;
