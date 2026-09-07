@@ -258,10 +258,22 @@
     .caption-copy { position:absolute; right:8px; bottom:8px; min-height:30px; padding:4px 9px; font-size:12px; }
     .live-clock { margin:-5px 0 20px; color:var(--cyan); font:600 20px 'Exo 2',sans-serif; letter-spacing:.8px; }
     .custom-cards { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:13px; }
-    .custom-card { padding:16px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); }
+    .custom-card { width:100%; padding:16px; border:1px solid var(--border); border-left:4px solid var(--cyan); border-radius:var(--radius); background:var(--surface); text-align:left; cursor:pointer; }
+    .custom-card:hover { border-color:var(--cyan); background:var(--surface-2); }
     .custom-card h4 { margin-bottom:5px; color:var(--text); font-size:17px; }
-    .custom-card time { display:block; margin-bottom:12px; color:var(--faint); font-size:13px; }
+    .custom-card time { display:block; margin-bottom:8px; color:var(--faint); font-size:13px; }
     .custom-card p { margin:7px 0; color:var(--muted); font-size:15px; white-space:pre-wrap; }
+    .card-client-name { color:var(--cyan); font-size:14px; font-weight:700; }
+    .card-meta { display:flex; flex-wrap:wrap; gap:7px; margin-top:12px; }
+    .card-history { display:grid; gap:8px; margin-top:16px; }
+    .card-history-item { padding:10px; border-left:2px solid var(--border); background:var(--surface-2); color:var(--muted); font-size:14px; }
+    .card-history-item time { margin:3px 0 0; font-size:12px; }
+    .execution-list { display:grid; gap:13px; }
+    .execution-card { padding:16px; border:1px solid var(--border); border-left:4px solid var(--cyan); border-radius:var(--radius); background:var(--surface); }
+    .execution-card h4 { margin-bottom:5px; font-size:18px; }
+    .execution-card p { color:var(--muted); font-size:15px; }
+    .card-detail-section { margin-top:16px; padding-top:16px; border-top:1px solid var(--border); }
+    .card-detail-section h4 { margin-bottom:10px; color:var(--muted); font:600 11px 'Exo 2',sans-serif; letter-spacing:1.2px; text-transform:uppercase; }
     .custom-field-row { display:grid; grid-template-columns:1fr auto; gap:8px; align-items:start; margin-top:9px; }
     .custom-field-row .control { min-height:38px; }
     .auth-brand { font-size:20px; }
@@ -469,6 +481,8 @@
         <div class="custom-cards" id="customCardsGrid"></div>
       </section>
 
+      <section class="section hidden" id="orderExecutionSection"><div class="section-heading"><h3>Ordem de Execução</h3><span id="orderExecutionCount"></span></div><div class="execution-list" id="orderExecutionList"></div></section>
+
       <section class="section hidden" id="settingsSection">
         <div class="settings-grid">
           <article class="settings-card">
@@ -559,12 +573,15 @@
       <div class="form-grid">
         <div class="field form-group full"><label for="cardTitle">Título</label><input class="control" id="cardTitle" type="text"></div>
         <div class="field form-group full"><label for="cardClient">Vincular a cliente</label><select class="control" id="cardClient"><option value="">Sem vínculo com cliente</option></select></div>
-        <div class="field form-group full"><label for="cardObservations">Observações</label><textarea class="control" id="cardObservations"></textarea></div>
+        <div class="field form-group full"><label for="cardResponsible">Responsável</label><select class="control" id="cardResponsible"><option value="">Sem responsável</option></select></div>
+        <div class="field form-group full"><label for="cardObservations">Orientação principal</label><textarea class="control" id="cardObservations"></textarea></div>
         <div class="field form-group full"><label>Campos personalizados</label><div id="customCardFields"></div><div class="settings-actions" style="margin-top:10px"><button class="btn btn-ghost btn-small" type="button" onclick="addCustomCardField('text')">+ Texto</button><button class="btn btn-ghost btn-small" type="button" onclick="addCustomCardField('date')">+ Data</button><button class="btn btn-ghost btn-small" type="button" onclick="addCustomCardField('link')">+ Link</button></div></div>
       </div>
       <div class="modal-actions"><button class="btn btn-ghost" type="button" onclick="closeModal('customCardModal')">Cancelar</button><button class="btn btn-primary" type="button" onclick="saveCustomCard()">Salvar card</button></div>
     </div>
   </div>
+
+  <div class="modal-overlay" id="cardDetailModal" role="dialog" aria-modal="true" aria-labelledby="cardDetailTitle"><div class="modal"><div class="modal-title" id="cardDetailTitle">Card</div><div id="cardDetailContent"></div></div></div>
 
   <div class="account-menu" id="accountMenu" aria-label="Menu de perfil"></div>
 
@@ -599,12 +616,13 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const STATUSES = ['Criar','Conferir','Refinar','Programado','Publicado'];
-    const NAV_ITEMS = ['Painel','Todos','Clientes',...STATUSES,'Configurações'];
+    const NAV_ITEMS = ['Painel','Ordem de Execução','Todos','Clientes',...STATUSES,'Configurações'];
     const COLORS = ['#00d4ff','#f0b429','#00e676','#ff4d67','#a29bfe','#ff9f43','#fd79a8','#55efc4','#74b9ff'];
     const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
     const SHORT_DAYS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
     const VIEW_TEXT = {
       'Painel':'Visão geral da operação.',
+      'Ordem de Execução':'Demandas e aprovações relacionadas a você.',
       'Todos':'Visão completa da operação.',
       'Clientes':'Consulte, inclua e edite os clientes.',
       'Criar':'Conteúdos que ainda precisam ser criados.',
@@ -654,7 +672,7 @@
       if(view==='Configurações' && currentProfile?.role!=='admin') view='Painel';
       state.view=view;
       if (STATUSES.includes(view)) state.status=view;
-      else if (view==='Painel' || view==='Todos' || view==='Clientes' || view==='Configurações') state.status='';
+      else if (view==='Painel' || view==='Ordem de Execução' || view==='Todos' || view==='Clientes' || view==='Configurações') state.status='';
       if (view==='Clientes' || view==='Configurações') state.clientId='';
       state.filtersOpen=view==='Todos';
       render();
@@ -710,7 +728,7 @@
     function renderFilterControls() {
       const isTodos=state.view==='Todos';
       const isClients=state.view==='Clientes';
-      const supportsFilters=state.view!=='Configurações';
+      const supportsFilters=state.view!=='Configurações' && state.view!=='Ordem de Execução';
       const isStage=STATUSES.includes(state.view);
       const isOpen=isTodos || state.filtersOpen;
       const panel=document.getElementById('filterPanel');
@@ -759,7 +777,7 @@
       const action=document.getElementById('primaryAction');
       action.classList.remove('hidden');
       if(state.view==='Clientes') { action.textContent='Novo cliente'; action.onclick=()=>openClientModal(); }
-      else if(state.view==='Configurações') action.classList.add('hidden');
+      else if(state.view==='Configurações' || state.view==='Ordem de Execução') action.classList.add('hidden');
       else if(state.view==='Criar') { action.textContent='Novo card'; action.onclick=()=>openCustomCardModal(); }
       else { action.textContent=state.view==='Programado'?'Nova programação':'Nova postagem'; action.onclick=()=>openPostModal(); }
     }
@@ -795,7 +813,7 @@
 
     function renderPosts() {
       const section=document.getElementById('postsSection');
-      if(state.view==='Clientes'||state.view==='Configurações') { section.classList.add('hidden'); return; }
+      if(state.view==='Clientes'||state.view==='Configurações'||state.view==='Ordem de Execução') { section.classList.add('hidden'); return; }
       section.classList.remove('hidden');
       const posts=filteredPosts(), clients=getClients();
       document.getElementById('postsHeading').textContent=state.view==='Painel'||state.view==='Todos'?'Postagens':(state.status||'Postagens');
@@ -838,7 +856,7 @@
     }
 
     function renderMainContent() {
-      renderPageHeader(); renderSummary(); renderClients(); renderPosts(); renderSettings(); renderCalendarSection();
+      renderPageHeader(); renderSummary(); renderClients(); renderPosts(); renderOrderExecution(); renderSettings(); renderCalendarSection();
     }
 
     function render() {
@@ -1032,6 +1050,9 @@
     let cloudClients = [];
     let cloudPosts = [];
     let cloudCards = [];
+    let cloudCardUpdates = [];
+    let cloudCardNotifications = [];
+    let editingCardId = null;
     let cardFields = [];
     let selectedHistoryIds = new Set();
     let cloudActivities = [];
@@ -1216,20 +1237,24 @@
     }
 
     async function loadCloudData() {
-      const [clientsResult,postsResult,cardsResult,activitiesResult,profilesResult,readsResult]=await Promise.all([
+      const [clientsResult,postsResult,cardsResult,cardUpdatesResult,cardNotificationsResult,activitiesResult,profilesResult,readsResult]=await Promise.all([
         supabaseClient.from('clients').select('*').order('name'),
         supabaseClient.from('posts').select('*').order('updated_at',{ascending:false}),
         supabaseClient.from('custom_cards').select('*').order('created_at',{ascending:false}),
+        supabaseClient.from('card_updates').select('*').order('created_at',{ascending:true}),
+        supabaseClient.from('card_notifications').select('*').order('created_at',{ascending:false}),
         supabaseClient.from('activity_log').select('*').order('created_at',{ascending:false}).limit(100),
         supabaseClient.from('profiles').select('id,display_name,email,phone,instagram,avatar_url,role,active'),
         supabaseClient.from('activity_reads').select('last_read_at').eq('user_id',currentProfile.id).maybeSingle()
       ]);
-      if(clientsResult.error || postsResult.error || cardsResult.error || activitiesResult.error) throw new Error('Não foi possível carregar os dados compartilhados.');
+      if(clientsResult.error || postsResult.error || cardsResult.error || cardUpdatesResult.error || cardNotificationsResult.error || activitiesResult.error) throw new Error('Não foi possível carregar os dados compartilhados.');
       const people=new Map((profilesResult.data||[]).map(person=>[person.id,person]));
       cloudProfiles=profilesResult.data||[];
       cloudClients=(clientsResult.data||[]).map(mapClient);
       cloudPosts=(postsResult.data||[]).map(mapPost);
       cloudCards=cardsResult.data||[];
+      cloudCardUpdates=(cardUpdatesResult.data||[]).map(item=>({...item,author:people.get(item.author_id)||null}));
+      cloudCardNotifications=cardNotificationsResult.data||[];
       cloudActivities=(activitiesResult.data||[]).map(item=>({...item,actor:people.get(item.actor_id)}));
       activityReadAt=readsResult.data?.last_read_at||null;
     }
@@ -1275,6 +1300,8 @@
         .on('postgres_changes',{event:'*',schema:'public',table:'clients'},refreshFromRealtime)
         .on('postgres_changes',{event:'*',schema:'public',table:'posts'},refreshFromRealtime)
         .on('postgres_changes',{event:'*',schema:'public',table:'custom_cards'},refreshFromRealtime)
+        .on('postgres_changes',{event:'*',schema:'public',table:'card_updates'},refreshFromRealtime)
+        .on('postgres_changes',{event:'*',schema:'public',table:'card_notifications'},refreshFromRealtime)
         .on('postgres_changes',{event:'*',schema:'public',table:'activity_log'},refreshFromRealtime)
         .on('postgres_changes',{event:'*',schema:'public',table:'profiles'},refreshFromRealtime)
         .subscribe();
@@ -1399,37 +1426,68 @@
     function addCustomCardField(type) { cardFields.push({id:`${Date.now()}-${Math.random()}`,type,value:''}); renderCustomCardFields(); }
     function updateCustomCardField(id,value) { const field=cardFields.find(item=>item.id===id); if(field) field.value=value; }
     function removeCustomCardField(id) { cardFields=cardFields.filter(item=>item.id!==id); renderCustomCardFields(); }
-    function openCustomCardModal(preselectedClientId='') {
-      const select=document.getElementById('cardClient');
-      select.innerHTML='<option value="">Sem vínculo com cliente</option>'+getClients().map(client=>`<option value="${client.id}">${escapeHtml(client.name)}</option>`).join('');
-      document.getElementById('cardTitle').value='';
-      document.getElementById('cardClient').value=preselectedClientId||'';
-      document.getElementById('cardObservations').value=''; cardFields=[]; renderCustomCardFields();
-      document.getElementById('customCardModal').classList.add('open');
+    function stageLabel(stage='criar') { return ({criar:'Criar',conferir:'Conferir',refinar:'Refinar'})[stage]||'Criar'; }
+    function getCardClient(card) { return getClients().find(client=>client.id===card.client_id)||null; }
+    function cardOwner(card) { return cloudProfiles.find(person=>person.id===card.created_by)||null; }
+    function canEditCardOrientation(card) { return currentProfile?.role==='admin' || card.created_by===currentProfile?.id; }
+    function fillCardSelects(card=null,preselectedClientId='') {
+      const clientSelect=document.getElementById('cardClient'), responsibleSelect=document.getElementById('cardResponsible');
+      clientSelect.innerHTML='<option value="">Sem vínculo com cliente</option>'+getClients().map(client=>`<option value="${client.id}">${escapeHtml(client.name)}</option>`).join('');
+      responsibleSelect.innerHTML='<option value="">Sem responsável</option>'+cloudProfiles.filter(person=>person.active).map(person=>`<option value="${person.id}">${escapeHtml(person.display_name||person.email)}</option>`).join('');
+      clientSelect.value=card?.client_id||preselectedClientId||''; responsibleSelect.value=card?.responsible_id||'';
     }
+    function openCustomCardModal(preselectedClientId='',cardId=null) {
+      editingCardId=cardId; const card=cardId?cloudCards.find(item=>item.id===cardId):null;
+      if(cardId&&!card) return;
+      if(card&&!canEditCardOrientation(card)) return toast('A orientação principal só pode ser alterada por quem criou o card ou pela administradora.');
+      document.getElementById('customCardModalTitle').textContent=card?'Editar orientação':'Novo card';
+      fillCardSelects(card,preselectedClientId); document.getElementById('cardTitle').value=card?.title||''; document.getElementById('cardObservations').value=card?.observations||'';
+      cardFields=(card?.fields||[]).map(field=>({id:`${Date.now()}-${Math.random()}`,type:field.type,value:field.value||''})); renderCustomCardFields(); document.getElementById('customCardModal').classList.add('open');
+    }
+    async function notifyCardRecipient(cardId,recipientId,notificationType) { if(!recipientId||recipientId===currentProfile.id) return; await supabaseClient.from('card_notifications').insert({card_id:cardId,recipient_id:recipientId,notification_type:notificationType,created_by:currentProfile.id}); }
     async function saveCustomCard() {
-      const title=document.getElementById('cardTitle').value.trim();
-      if(!title) return toast('Informe o título do card.');
+      const title=document.getElementById('cardTitle').value.trim(); if(!title) return toast('Informe o título do card.');
       const fields=cardFields.filter(field=>field.value.trim()).map(field=>({type:field.type,value:field.value.trim()}));
-      const {error}=await supabaseClient.from('custom_cards').insert({title,client_id:document.getElementById('cardClient').value||null,observations:document.getElementById('cardObservations').value.trim()||null,fields,created_by:currentProfile.id,updated_by:currentProfile.id});
-      if(error) return toast('Não foi possível salvar o card.');
-      closeModal('customCardModal'); await loadCloudData(); render(); toast('Card salvo.');
+      const payload={title,client_id:document.getElementById('cardClient').value||null,responsible_id:document.getElementById('cardResponsible').value||null,observations:document.getElementById('cardObservations').value.trim()||null,fields,updated_by:currentProfile.id};
+      let cardId=editingCardId, previousResponsible='';
+      if(editingCardId) { const existing=cloudCards.find(card=>card.id===editingCardId); previousResponsible=existing?.responsible_id||''; const {error}=await supabaseClient.from('custom_cards').update(payload).eq('id',editingCardId); if(error) return toast('Não foi possível salvar a orientação do card.'); }
+      else { const {data,error}=await supabaseClient.from('custom_cards').insert({...payload,stage:'criar',created_by:currentProfile.id}).select().single(); if(error) return toast('Não foi possível salvar o card.'); cardId=data.id; }
+      if(payload.responsible_id&&payload.responsible_id!==previousResponsible) await notifyCardRecipient(cardId,payload.responsible_id,'demanda');
+      closeModal('customCardModal'); editingCardId=null; await loadCloudData(); render(); toast('Card salvo.');
+    }
+    function renderCardSummary(card) {
+      const client=getCardClient(card), responsible=cloudProfiles.find(person=>person.id===card.responsible_id), color=client?.color||'var(--cyan)';
+      return `<button class="custom-card" type="button" style="border-left-color:${escapeHtml(color)}" onclick="openCardDetail('${card.id}')"><h4>${escapeHtml(card.title||'Sem título')}</h4><div class="card-client-name" style="color:${escapeHtml(color)}">${escapeHtml(client?.name||'Sem cliente vinculado')}</div><time>Registrado em ${new Date(card.created_at).toLocaleString('pt-BR')}</time><div class="card-meta"><span class="badge">${stageLabel(card.stage)}</span>${responsible?`<span class="badge">${escapeHtml(responsible.display_name||responsible.email)}</span>`:''}</div></button>`;
     }
     function renderCustomCards() {
-      const section=document.getElementById('customCardsSection');
-      const inClient=state.view==='Todos' && Boolean(state.clientId);
-      if(state.view!=='Criar' && !inClient) { section.classList.add('hidden'); return; }
-      section.classList.remove('hidden');
-      document.getElementById('customCardsHeading').textContent=inClient?'Criar':'Cards';
-      const clients=getClients(), grid=document.getElementById('customCardsGrid');
-      const cards=inClient?cloudCards.filter(card=>card.client_id===state.clientId):cloudCards;
-      grid.innerHTML=cards.length?cards.map(card=>{
-        const fields=(card.fields||[]).map(field=>{
-          if(field.type==='link') { const url=safeUrl(field.value); return url?`<p><a href="${url}" target="_blank" rel="noopener">Abrir link</a></p>`:''; }
-          return `<p>${field.type==='date'?formatDate(field.value):escapeHtml(field.value)}</p>`;
-        }).join('');
-        return `<article class="custom-card"><h4>${escapeHtml(card.title||'')}</h4><time>Registrado em ${new Date(card.created_at).toLocaleString('pt-BR')}</time>${card.observations?`<p>${escapeHtml(card.observations)}</p>`:''}${fields}</article>`;
-      }).join(''):'<div class="empty-state"><strong>Nenhum card para criar</strong><span>Use “Novo card” para registrar um item.</span></div>';
+      const section=document.getElementById('customCardsSection'), inClient=state.view==='Todos'&&Boolean(state.clientId), cardStage=String(state.view||'').toLowerCase(), isWorkflowStage=['criar','conferir','refinar'].includes(cardStage);
+      if(!isWorkflowStage&&!inClient) { section.classList.add('hidden'); return; }
+      section.classList.remove('hidden'); document.getElementById('customCardsHeading').textContent=inClient?'Cards do cliente':`Cards — ${stageLabel(cardStage)}`;
+      const grid=document.getElementById('customCardsGrid'), cards=inClient?cloudCards.filter(card=>card.client_id===state.clientId):cloudCards.filter(card=>(card.stage||'criar')===cardStage);
+      grid.innerHTML=cards.length?cards.map(renderCardSummary).join(''):`<div class="empty-state"><strong>Nenhum card em ${stageLabel(cardStage)}</strong><span>Use “Novo card” para registrar um item.</span></div>`;
+    }
+    function cardFieldsHtml(card) { return (card.fields||[]).map(field=>{ if(field.type==='link') { const url=safeUrl(field.value); return url?`<p><a href="${url}" target="_blank" rel="noopener">Abrir link</a></p>`:''; } return `<p>${field.type==='date'?formatDate(field.value):escapeHtml(field.value)}</p>`; }).join(''); }
+    function openCardDetail(cardId) {
+      const card=cloudCards.find(item=>item.id===cardId); if(!card) return;
+      const client=getCardClient(card),owner=cardOwner(card),responsible=cloudProfiles.find(person=>person.id===card.responsible_id),color=client?.color||'var(--cyan)',updates=cloudCardUpdates.filter(item=>item.card_id===card.id),canEdit=canEditCardOrientation(card);
+      document.getElementById('cardDetailTitle').textContent=card.title||'Card';
+      document.getElementById('cardDetailContent').innerHTML=`<div class="card-client-name" style="color:${escapeHtml(color)}">${escapeHtml(client?.name||'Sem cliente vinculado')}</div><p style="margin-top:8px;color:var(--muted)">Criado por ${escapeHtml(owner?.display_name||owner?.email||'Usuária removida')} em ${new Date(card.created_at).toLocaleString('pt-BR')}</p><div class="card-detail-section"><h4>Orientação principal</h4>${card.observations?`<p>${escapeHtml(card.observations)}</p>`:''}${cardFieldsHtml(card)}${canEdit?`<button class="btn btn-ghost btn-small" type="button" onclick="closeModal('cardDetailModal');openCustomCardModal('', '${card.id}')">Editar orientação</button>`:''}</div><div class="card-detail-section"><h4>Andamento</h4><div class="form-grid"><div class="field form-group"><label for="cardStageAction">Etapa</label><select class="control" id="cardStageAction"><option value="criar">Criar</option><option value="conferir">Conferir</option><option value="refinar">Refinar</option></select></div><div class="field form-group"><label>Responsável</label><div class="control" style="display:flex;align-items:center">${escapeHtml(responsible?.display_name||responsible?.email||'Sem responsável')}</div></div><div class="field form-group full"><label for="cardProgressText">Registrar execução ou observação</label><textarea class="control" id="cardProgressText"></textarea></div></div><div class="modal-actions"><button class="btn btn-ghost" type="button" onclick="closeModal('cardDetailModal')">Fechar</button><button class="btn btn-primary" type="button" onclick="saveCardProgress('${card.id}')">Registrar atualização</button></div></div><div class="card-detail-section"><h4>Histórico do card</h4><div class="card-history">${updates.length?updates.map(update=>`<div class="card-history-item"><strong>${escapeHtml(update.author?.display_name||update.author?.email||'Usuária')}</strong> ${update.action_type==='mudanca_de_etapa'?`moveu de ${stageLabel(update.from_stage)} para ${stageLabel(update.to_stage)}`:(update.action_type==='execucao'?'registrou uma execução':'adicionou uma observação')}${update.content?`<p>${escapeHtml(update.content)}</p>`:''}<time>${new Date(update.created_at).toLocaleString('pt-BR')}</time></div>`).join(''):'<p>Nenhuma atualização registrada.</p>'}</div></div>`;
+      document.getElementById('cardStageAction').value=card.stage||'criar'; document.getElementById('cardDetailModal').classList.add('open');
+    }
+    async function saveCardProgress(cardId) {
+      const card=cloudCards.find(item=>item.id===cardId); if(!card) return;
+      const toStage=document.getElementById('cardStageAction').value,content=document.getElementById('cardProgressText').value.trim(),changedStage=(card.stage||'criar')!==toStage;
+      if(!content&&!changedStage) return toast('Registre uma observação ou escolha outra etapa.');
+      const {error}=await supabaseClient.from('card_updates').insert({card_id:cardId,author_id:currentProfile.id,action_type:changedStage?'mudanca_de_etapa':'observacao',content:content||null,from_stage:changedStage?(card.stage||'criar'):null,to_stage:changedStage?toStage:null});
+      if(error) return toast('Não foi possível atualizar o card.');
+      if(changedStage&&toStage==='conferir') await notifyCardRecipient(cardId,card.created_by,'aprovacao');
+      closeModal('cardDetailModal'); await loadCloudData(); render(); toast('Atualização registrada.');
+    }
+    function renderOrderExecution() {
+      const section=document.getElementById('orderExecutionSection'); if(state.view!=='Ordem de Execução') { section.classList.add('hidden'); return; } section.classList.remove('hidden');
+      const cards=cloudCards.filter(card=>card.created_by===currentProfile?.id||card.responsible_id===currentProfile?.id),list=document.getElementById('orderExecutionList');
+      document.getElementById('orderExecutionCount').textContent=`${cards.length} demanda${cards.length===1?'':'s'}`;
+      list.innerHTML=cards.length?cards.map(card=>{ const client=getCardClient(card),color=client?.color||'var(--cyan)',approval=(card.stage==='conferir'&&card.created_by===currentProfile?.id); return `<article class="execution-card" style="border-left-color:${escapeHtml(color)}"><h4>${escapeHtml(card.title||'Sem título')}</h4><p style="color:${escapeHtml(color)}">${escapeHtml(client?.name||'Sem cliente vinculado')}</p><p>${approval?'Aguardando sua aprovação':`Etapa: ${stageLabel(card.stage)}`}</p><button class="btn btn-ghost btn-small" type="button" onclick="openCardDetail('${card.id}')">Abrir</button></article>`; }).join(''):'<div class="empty-state"><strong>Nenhuma demanda relacionada a você</strong></div>';
     }
     async function clearNotifications() {
       await supabaseClient.from('activity_reads').upsert({user_id:currentProfile.id,last_read_at:new Date().toISOString()});
