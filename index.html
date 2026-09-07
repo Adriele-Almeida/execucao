@@ -324,7 +324,7 @@
         <div class="settings-grid">
           <article class="settings-card">
             <h3>Backup dos dados</h3>
-            <p>Exporte uma cópia completa ou restaure os dados usando um arquivo anterior.</p>
+            <p>Exporte uma cópia completa ou importe registros de um arquivo anterior para a base compartilhada.</p>
             <div class="settings-actions">
               <button class="btn btn-primary" type="button" onclick="exportBackup()">Exportar backup</button>
               <label class="btn btn-ghost" for="backupInput">Importar backup</label>
@@ -1004,6 +1004,28 @@
       const {error}=await supabaseClient.from('clients').delete().eq('id',id);
       if(error) return toast('Não foi possível excluir o cliente.');
       await loadCloudData(); render(); toast('Cliente excluído.');
+    }
+
+    function importBackup(event) {
+      const file=event.target.files[0]; if(!file) return;
+      const reader=new FileReader();
+      reader.onload=async()=>{
+        try {
+          const data=JSON.parse(reader.result);
+          if(!Array.isArray(data.clientes)||!Array.isArray(data.posts)) throw new Error();
+          if(!confirm('Importar este arquivo adicionará estes registros à base compartilhada. Continuar?')) return;
+          const clientMap=new Map();
+          for(const client of data.clientes) {
+            const {data:created,error}=await supabaseClient.from('clients').insert({name:client.name,instagram:client.instagram||null,niche:client.niche||null,color:client.color||COLORS[0],created_by:currentProfile.id,updated_by:currentProfile.id}).select().single();
+            if(error) throw error;
+            clientMap.set(client.id,created.id);
+          }
+          const importedPosts=data.posts.filter(post=>clientMap.has(post.clientId)).map(post=>({title:post.title,client_id:clientMap.get(post.clientId),status:post.status,type:post.type||null,post_date:post.date||null,post_time:post.status==='Programado'?(post.hora||null):null,canva:post.canva||null,legenda:post.legenda||null,notes:post.notes||null,automatic_status_update:false,created_by:currentProfile.id,updated_by:currentProfile.id}));
+          if(importedPosts.length) { const {error}=await supabaseClient.from('posts').insert(importedPosts); if(error) throw error; }
+          await loadCloudData(); render(); toast('Backup importado para a base compartilhada.');
+        } catch { toast('Não foi possível importar este arquivo.'); }
+      };
+      reader.readAsText(file); event.target.value='';
     }
 
     function activityText(item) {
