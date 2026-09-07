@@ -152,6 +152,14 @@
     .color-option.selected { border-color:white; transform:scale(1.12); }
     .toast { position:fixed; right:18px; bottom:18px; z-index:500; max-width:330px; padding:11px 15px; border-radius:7px; background:var(--cyan); color:#001115; font-weight:700; transform:translateY(80px); opacity:0; transition:.2s; }
     .toast.show { transform:translateY(0); opacity:1; }
+    .auth-screen { position:fixed; inset:0; z-index:1000; display:grid; place-items:center; padding:20px; background:rgba(8,9,9,.97); }
+    .auth-card { width:min(420px,100%); padding:28px; border:1px solid var(--border); border-radius:14px; background:var(--surface); box-shadow:0 24px 80px rgba(0,0,0,.45); }
+    .auth-brand { margin-bottom:24px; color:var(--cyan); font:700 18px 'Exo 2',sans-serif; letter-spacing:1.5px; text-transform:uppercase; }
+    .auth-card p { margin:-14px 0 22px; color:var(--muted); font-size:14px; }
+    .auth-card .field { margin-bottom:14px; }
+    .auth-error { min-height:20px; margin-top:12px; color:var(--red); font-size:13px; }
+    .account-button { min-height:38px; max-width:150px; overflow:hidden; border:1px solid var(--border); border-radius:6px; padding:7px 10px; background:transparent; color:var(--muted); text-overflow:ellipsis; white-space:nowrap; font-size:12px; }
+    .account-button:hover { border-color:var(--cyan); color:var(--cyan); }
     .hidden { display:none !important; }
 
     @media (max-width:1050px) {
@@ -164,6 +172,7 @@
       .brand h1 { font-size:11px; letter-spacing:1.5px; }
       .brand p { font-size:10px; }
       .header-actions .btn { min-height:34px; padding:7px 9px; font-size:10px; }
+      .account-button { display:none; }
       .app-shell { display:block; min-height:calc(100vh - 66px); }
       .sidebar { position:sticky; top:66px; z-index:90; width:100%; height:auto; padding:8px; overflow-x:auto; border-right:0; border-bottom:1px solid var(--border); white-space:nowrap; }
       .nav-label,.nav-separator { display:none; }
@@ -216,6 +225,7 @@
     <div class="header-actions">
       <button class="btn btn-primary" type="button" onclick="openPostModal()">Nova postagem</button>
       <button class="btn btn-ghost" type="button" onclick="openClientModal()">Novo cliente</button>
+      <button class="account-button" id="accountButton" type="button" onclick="signOut()" title="Sair do aplicativo"></button>
       <button class="icon-btn" type="button" onclick="toggleActivity()" aria-label="Abrir atualizações">◇<span class="notification-count" id="notificationCount">0</span></button>
     </div>
   </header>
@@ -374,6 +384,18 @@
 
   <div class="toast" id="toast"></div>
 
+  <section class="auth-screen" id="authScreen" aria-label="Acesso ao aplicativo">
+    <form class="auth-card" onsubmit="signIn(event)">
+      <div class="auth-brand">ORDEM DE EXECUÇÃO</div>
+      <p>Entre com seu e-mail e senha para acessar a base operacional.</p>
+      <div class="field"><label for="authEmail">E-mail</label><input class="control" id="authEmail" type="email" autocomplete="username" required></div>
+      <div class="field"><label for="authPassword">Senha</label><input class="control" id="authPassword" type="password" autocomplete="current-password" required></div>
+      <button class="btn btn-primary" id="authSubmit" type="submit" style="width:100%">Entrar</button>
+      <div class="auth-error" id="authError"></div>
+    </form>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const STATUSES = ['A fazer','Conferir','Refinar','Programado','Publicado'];
     const NAV_ITEMS = ['Painel','Todos','Clientes',...STATUSES,'Configurações'];
@@ -799,9 +821,176 @@
       if(changed) savePosts(updated);
     }
 
+    /* Fase 2: dados compartilhados, login e atualizações em tempo real */
+    const SUPABASE_URL = 'https://rlrtpastjkltutxbftql.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_2UDTBr-_x-LBhKd9vkfVag_KYeqC_jh';
+    let supabaseClient = null;
+    let cloudClients = [];
+    let cloudPosts = [];
+    let cloudActivities = [];
+    let currentProfile = null;
+    let activityReadAt = null;
+    let realtimeChannel = null;
+
+    function getClients() { return cloudClients; }
+    function getPosts() { return cloudPosts; }
+    function getActivities() { return cloudActivities; }
+    function saveClients() {}
+    function savePosts() {}
+    function saveActivities() {}
+    function logActivity() {}
+
+    function mapClient(row) { return {id:row.id,name:row.name,instagram:row.instagram||'',niche:row.niche||'',color:row.color||COLORS[0]}; }
+    function mapPost(row) { return {id:row.id,title:row.title,clientId:row.client_id,status:row.status,type:row.type||'',date:row.post_date||'',hora:(row.post_time||'').slice(0,5),canva:row.canva||'',legenda:row.legenda||'',notes:row.notes||'',updatedAt:Date.parse(row.updated_at||row.created_at||0)}; }
+
+    function cloudReady() { return Boolean(supabaseClient && currentProfile); }
+
+    async function signIn(event) {
+      event.preventDefault();
+      const error=document.getElementById('authError');
+      const submit=document.getElementById('authSubmit');
+      error.textContent=''; submit.disabled=true; submit.textContent='Entrando...';
+      const {error:signInError}=await supabaseClient.auth.signInWithPassword({email:document.getElementById('authEmail').value.trim(),password:document.getElementById('authPassword').value});
+      submit.disabled=false; submit.textContent='Entrar';
+      if(signInError) { error.textContent='Não foi possível entrar. Confira seu e-mail e senha.'; return; }
+      await initializeApp();
+    }
+
+    async function signOut() {
+      if(!supabaseClient) return;
+      await supabaseClient.auth.signOut();
+      currentProfile=null; cloudClients=[]; cloudPosts=[]; cloudActivities=[];
+      document.getElementById('authPassword').value='';
+      document.getElementById('authScreen').classList.remove('hidden');
+    }
+
+    async function loadCloudData() {
+      const [clientsResult,postsResult,activitiesResult,profilesResult,readsResult]=await Promise.all([
+        supabaseClient.from('clients').select('*').order('name'),
+        supabaseClient.from('posts').select('*').order('updated_at',{ascending:false}),
+        supabaseClient.from('activity_log').select('*').order('created_at',{ascending:false}).limit(100),
+        supabaseClient.from('profiles').select('id,display_name,email,role,active'),
+        supabaseClient.from('activity_reads').select('last_read_at').eq('user_id',currentProfile.id).maybeSingle()
+      ]);
+      if(clientsResult.error || postsResult.error || activitiesResult.error) throw new Error('Não foi possível carregar os dados compartilhados.');
+      const people=new Map((profilesResult.data||[]).map(person=>[person.id,person]));
+      cloudClients=(clientsResult.data||[]).map(mapClient);
+      cloudPosts=(postsResult.data||[]).map(mapPost);
+      cloudActivities=(activitiesResult.data||[]).map(item=>({...item,actor:people.get(item.actor_id)}));
+      activityReadAt=readsResult.data?.last_read_at||null;
+    }
+
+    async function migrateLocalData() {
+      const localClients=readData('dsc_clients'), localPosts=readData('dsc_posts');
+      if(cloudClients.length || (!localClients.length && !localPosts.length)) return;
+      const clientMap=new Map();
+      for(const client of localClients) {
+        const {data,error}=await supabaseClient.from('clients').insert({name:client.name,instagram:client.instagram||null,niche:client.niche||null,color:client.color||COLORS[0],created_by:currentProfile.id,updated_by:currentProfile.id}).select().single();
+        if(error) throw error;
+        clientMap.set(client.id,data.id);
+      }
+      const importedPosts=localPosts.filter(post=>clientMap.has(post.clientId)).map(post=>({title:post.title,client_id:clientMap.get(post.clientId),status:post.status,type:post.type||null,post_date:post.date||null,post_time:post.hora||null,canva:post.canva||null,legenda:post.legenda||null,notes:post.notes||null,created_by:currentProfile.id,updated_by:currentProfile.id}));
+      if(importedPosts.length) { const {error}=await supabaseClient.from('posts').insert(importedPosts); if(error) throw error; }
+    }
+
+    async function initializeApp() {
+      if(!window.supabase || SUPABASE_URL.startsWith('__')) return;
+      if(!supabaseClient) supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+      const {data:{session}}=await supabaseClient.auth.getSession();
+      if(!session) { document.getElementById('authScreen').classList.remove('hidden'); return; }
+      const {data:profile,error}=await supabaseClient.from('profiles').select('*').eq('id',session.user.id).maybeSingle();
+      if(error || !profile || !profile.active) { await supabaseClient.auth.signOut(); document.getElementById('authError').textContent='Este acesso não está ativo.'; document.getElementById('authScreen').classList.remove('hidden'); return; }
+      currentProfile=profile;
+      try {
+        await loadCloudData();
+        await migrateLocalData();
+        await loadCloudData();
+        document.getElementById('accountButton').textContent=profile.display_name||profile.email;
+        document.getElementById('authScreen').classList.add('hidden');
+        render();
+        subscribeToChanges();
+        await updateAutomaticStatuses();
+      } catch(error) { document.getElementById('authError').textContent='A base foi criada, mas não foi possível carregar os dados.'; document.getElementById('authScreen').classList.remove('hidden'); }
+    }
+
+    function subscribeToChanges() {
+      if(realtimeChannel) supabaseClient.removeChannel(realtimeChannel);
+      realtimeChannel=supabaseClient.channel('ordem-execucao-atualizacoes')
+        .on('postgres_changes',{event:'*',schema:'public',table:'clients'},refreshFromRealtime)
+        .on('postgres_changes',{event:'*',schema:'public',table:'posts'},refreshFromRealtime)
+        .on('postgres_changes',{event:'*',schema:'public',table:'activity_log'},refreshFromRealtime)
+        .subscribe();
+    }
+    let realtimeTimer;
+    function refreshFromRealtime() { clearTimeout(realtimeTimer); realtimeTimer=setTimeout(async()=>{ await loadCloudData(); render(); },250); }
+
+    async function savePost() {
+      const title=document.getElementById('pTitle').value.trim(), status=document.getElementById('pStatus').value;
+      const clientId=document.getElementById('pClient').value, date=document.getElementById('pDate').value, hora=document.getElementById('pTime').value;
+      if(!title) return toast('Informe o que precisa ser feito.');
+      if(!clientId) return toast('Selecione um cliente.');
+      if(status==='Programado' && (!date||!hora)) return toast('Postagem programada precisa de data e horário.');
+      const payload={title,client_id:clientId,status,type:document.getElementById('pType').value||null,post_date:date||null,post_time:status==='Programado'?hora:null,canva:document.getElementById('pCanva').value.trim()||null,legenda:document.getElementById('pCaption').value.trim()||null,notes:document.getElementById('pNotes').value.trim()||null,automatic_status_update:false,updated_by:currentProfile.id};
+      const result=editingPostId ? await supabaseClient.from('posts').update(payload).eq('id',editingPostId) : await supabaseClient.from('posts').insert({...payload,created_by:currentProfile.id});
+      if(result.error) return toast('Não foi possível salvar a postagem.');
+      closeModal('postModal'); editingPostId=null; await loadCloudData(); render(); toast('Postagem salva.');
+    }
+
+    async function deleteCurrentPost() {
+      if(!editingPostId || !confirm('Excluir esta postagem definitivamente?')) return;
+      const {error}=await supabaseClient.from('posts').delete().eq('id',editingPostId);
+      if(error) return toast('Não foi possível excluir a postagem.');
+      closeModal('postModal'); editingPostId=null; await loadCloudData(); render(); toast('Postagem excluída.');
+    }
+
+    async function saveClient() {
+      const name=document.getElementById('cName').value.trim(); if(!name) return toast('Informe o nome do cliente.');
+      const payload={name,instagram:document.getElementById('cInstagram').value.trim()||null,niche:document.getElementById('cNiche').value.trim()||null,color:selectedColor,updated_by:currentProfile.id};
+      const result=editingClientId ? await supabaseClient.from('clients').update(payload).eq('id',editingClientId) : await supabaseClient.from('clients').insert({...payload,created_by:currentProfile.id});
+      if(result.error) return toast('Não foi possível salvar o cliente.');
+      closeModal('clientModal'); editingClientId=null; await loadCloudData(); render(); toast('Cliente salvo.');
+    }
+
+    async function deleteClientFromSettings() {
+      const id=document.getElementById('deleteClientSelect').value, client=getClients().find(item=>item.id===id); if(!client) return;
+      if(!confirm(`Excluir “${client.name}” e todas as postagens vinculadas? Esta ação não pode ser desfeita.`)) return;
+      const {error}=await supabaseClient.from('clients').delete().eq('id',id);
+      if(error) return toast('Não foi possível excluir o cliente.');
+      await loadCloudData(); render(); toast('Cliente excluído.');
+    }
+
+    function activityText(item) {
+      const name=item.after_data?.title||item.before_data?.title||item.after_data?.name||item.before_data?.name||'registro';
+      const actor=item.actor?.display_name||item.actor?.email||'Uma usuária';
+      const verb={insert:'criou',update:'atualizou',delete:'excluiu'}[item.action]||'alterou';
+      return `${actor} ${verb} ${item.entity_type==='client'?'o cliente':'a postagem'} “${name}”`;
+    }
+
+    async function toggleActivity() {
+      const panel=document.getElementById('activityPanel'); panel.classList.toggle('open');
+      panel.innerHTML=`<div class="activity-header">ATUALIZAÇÕES MANUAIS</div>${cloudActivities.length?cloudActivities.map(item=>`<div class="activity-item">${escapeHtml(activityText(item))}<time>${new Date(item.created_at).toLocaleString('pt-BR')}</time></div>`).join(''):'<div class="activity-item">Nenhuma atualização registrada.</div>'}`;
+      if(panel.classList.contains('open')&&cloudReady()) { await supabaseClient.from('activity_reads').upsert({user_id:currentProfile.id,last_read_at:new Date().toISOString()}); activityReadAt=new Date().toISOString(); renderNotificationCount(); }
+    }
+
+    function renderNotificationCount() {
+      const unread=cloudActivities.filter(item=>item.actor_id!==currentProfile?.id && (!activityReadAt || new Date(item.created_at)>new Date(activityReadAt))).length;
+      const count=document.getElementById('notificationCount'); count.textContent=String(Math.min(unread,99)); count.style.display=unread?'block':'none';
+    }
+
+    async function updateAutomaticStatuses() {
+      if(!cloudReady()) return;
+      const now=new Date();
+      const due=cloudPosts.filter(post=>post.status==='Programado'&&post.date&&post.hora&&new Date(`${post.date}T${post.hora}:00`)<=now);
+      if(!due.length) return;
+      await Promise.all(due.map(post=>supabaseClient.from('posts').update({status:'Publicado',automatic_status_update:true,updated_by:currentProfile.id}).eq('id',post.id)));
+      await loadCloudData(); render();
+    }
+
+    function render() { updateAutomaticStatuses(); renderNav(); populateFilterOptions(); renderFilterControls(); renderMainContent(); renderNotificationCount(); }
+
     document.querySelectorAll('.modal-overlay').forEach(overlay=>overlay.addEventListener('click',event=>{ if(event.target===overlay) closeModal(overlay.id); }));
     document.addEventListener('keydown',event=>{ if(event.key==='Escape') document.querySelectorAll('.modal-overlay.open').forEach(modal=>closeModal(modal.id)); });
-    render(); setInterval(()=>{ updateAutomaticStatuses(); renderMainContent(); },60000);
+    initializeApp(); setInterval(updateAutomaticStatuses,60000);
   </script>
 </body>
 </html>
