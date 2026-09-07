@@ -7,7 +7,7 @@
   <title>ORDEM DE EXECUÇÃO | Dashboard Estratégico</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@500;600;700&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg:#080909; --surface:#111313; --surface-2:#171a1b; --surface-3:#202425;
@@ -27,7 +27,8 @@
       display:flex; align-items:center; justify-content:space-between; gap:20px;
       background:rgba(17,19,19,.96); border-bottom:1px solid var(--border); backdrop-filter:blur(12px);
     }
-    .brand h1 { color:var(--cyan); font:700 14px 'Orbitron',sans-serif; letter-spacing:2.4px; }
+    .brand { border:0; padding:0; background:transparent; text-align:left; cursor:pointer; }
+    .brand h1 { color:var(--cyan); font:700 14px 'Exo 2',sans-serif; letter-spacing:2.4px; }
     .brand p { margin-top:5px; color:var(--muted); font-size:12px; letter-spacing:1.5px; }
     .header-actions { display:flex; align-items:center; gap:8px; }
     .icon-btn { width:42px; height:42px; border:1px solid var(--border); border-radius:8px; background:transparent; color:var(--text); position:relative; }
@@ -36,14 +37,14 @@
 
     .app-shell { display:grid; grid-template-columns:230px minmax(0,1fr); min-height:calc(100vh - 72px); }
     .sidebar { position:sticky; top:72px; height:calc(100vh - 72px); overflow:auto; padding:18px 10px; background:var(--surface); border-right:1px solid var(--border); }
-    .nav-label { padding:4px 12px 10px; color:var(--faint); font:500 9px 'Orbitron',sans-serif; letter-spacing:2px; text-transform:uppercase; }
+    .nav-label { padding:4px 12px 10px; color:var(--faint); font:500 9px 'Exo 2',sans-serif; letter-spacing:2px; text-transform:uppercase; }
     .nav-button { width:100%; border:0; border-left:3px solid transparent; border-radius:5px; padding:11px 12px; margin-bottom:3px; background:transparent; color:var(--muted); text-align:left; font-weight:600; font-size:14px; }
     .nav-button:hover,.nav-button.active { background:var(--surface-2); border-left-color:var(--cyan); color:var(--cyan); }
     .nav-separator { height:1px; margin:14px 10px; background:var(--border); }
 
     main { min-width:0; padding:28px; }
     .page-header { display:flex; align-items:flex-end; justify-content:space-between; gap:18px; margin-bottom:20px; }
-    .page-heading h2 { font:700 18px 'Orbitron',sans-serif; letter-spacing:1.5px; color:var(--text); text-transform:uppercase; }
+    .page-heading h2 { font:700 18px 'Exo 2',sans-serif; letter-spacing:1.5px; color:var(--text); text-transform:uppercase; }
     .page-heading p { margin-top:7px; color:var(--muted); font-size:14px; }
     .btn { min-height:38px; border-radius:6px; padding:8px 15px; border:1px solid transparent; display:inline-flex; align-items:center; justify-content:center; gap:7px; font-weight:700; font-size:12px; letter-spacing:.8px; text-transform:uppercase; }
     .btn-primary { background:var(--cyan); color:#001115; }
@@ -55,18 +56,21 @@
     .btn-small { min-height:32px; padding:6px 11px; font-size:11px; }
 
     .filter-panel { display:grid; grid-template-columns:1.1fr 1.2fr .85fr .85fr 1.5fr auto; gap:10px; align-items:end; margin-bottom:22px; padding:15px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); }
+    .filter-panel.clients-only { grid-template-columns:minmax(0,1fr) auto; }
+    .filter-actions { display:flex; justify-content:flex-end; margin:-5px 0 12px; }
+    .filter-toggle svg { width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
     .field label { display:block; margin-bottom:6px; color:var(--muted); font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; }
     .control { width:100%; min-height:40px; border:1px solid var(--border); border-radius:6px; padding:8px 10px; background:var(--surface-2); color:var(--text); outline:none; }
     .control:focus { border-color:var(--cyan); box-shadow:0 0 0 2px rgba(0,212,255,.1); }
 
     .summary-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:24px; }
     .summary-card { min-width:0; padding:16px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); }
-    .summary-value { font:700 23px 'Orbitron',sans-serif; }
+    .summary-value { font:700 23px 'Exo 2',sans-serif; }
     .summary-name { margin-top:7px; color:var(--muted); font-size:11px; letter-spacing:1px; text-transform:uppercase; }
 
     .section { margin-bottom:25px; }
     .section-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; padding-bottom:10px; margin-bottom:12px; border-bottom:1px solid var(--border); }
-    .section-heading h3 { font:600 11px 'Orbitron',sans-serif; color:var(--muted); letter-spacing:1.6px; text-transform:uppercase; }
+    .section-heading h3 { font:600 11px 'Exo 2',sans-serif; color:var(--muted); letter-spacing:1.6px; text-transform:uppercase; }
     .section-heading span { color:var(--faint); font-size:12px; }
     .quick-filters { display:flex; flex-wrap:wrap; gap:7px; margin:0 0 13px; }
     .quick-filter { min-height:31px; padding:6px 14px; border:1px solid var(--border); border-radius:18px; background:transparent; color:var(--muted); font-size:11px; font-weight:700; letter-spacing:.7px; text-transform:uppercase; }
@@ -84,7 +88,7 @@
 
     .calendar-box { border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); overflow:hidden; }
     .calendar-toolbar { display:flex; align-items:center; gap:8px; padding:12px; border-bottom:1px solid var(--border); }
-    .calendar-title { min-width:190px; color:var(--cyan); font:600 12px 'Orbitron',sans-serif; text-align:center; }
+    .calendar-title { min-width:190px; color:var(--cyan); font:600 12px 'Exo 2',sans-serif; text-align:center; }
     .calendar-toolbar .view-buttons { display:flex; gap:5px; margin-left:auto; }
     .calendar-toolbar .btn.active { border-color:var(--cyan); background:var(--cyan); color:#001115; }
     .calendar-grid.month { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:1px; background:var(--border); }
@@ -120,7 +124,7 @@
 
     .settings-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
     .settings-card { padding:18px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); }
-    .settings-card h3 { margin-bottom:8px; font:600 12px 'Orbitron',sans-serif; letter-spacing:1px; }
+    .settings-card h3 { margin-bottom:8px; font:600 12px 'Exo 2',sans-serif; letter-spacing:1px; }
     .settings-card p { margin-bottom:15px; color:var(--muted); font-size:13px; }
     .danger-card { border-color:rgba(255,77,103,.4); }
     .danger-card h3 { color:var(--red); }
@@ -129,7 +133,7 @@
 
     .activity-panel { display:none; margin-bottom:18px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); overflow:hidden; }
     .activity-panel.open { display:block; }
-    .activity-header { padding:11px 14px; border-bottom:1px solid var(--border); color:var(--cyan); font:600 11px 'Orbitron',sans-serif; letter-spacing:1px; }
+    .activity-header { padding:11px 14px; border-bottom:1px solid var(--border); color:var(--cyan); font:600 11px 'Exo 2',sans-serif; letter-spacing:1px; }
     .activity-item { padding:11px 14px; border-bottom:1px solid var(--border); color:var(--muted); font-size:13px; }
     .activity-item:last-child { border-bottom:0; }
     .activity-item time { display:block; margin-top:3px; color:var(--faint); font-size:11px; }
@@ -137,7 +141,7 @@
     .modal-overlay { display:none; position:fixed; inset:0; z-index:300; padding:20px; align-items:center; justify-content:center; background:rgba(0,0,0,.78); }
     .modal-overlay.open { display:flex; }
     .modal { width:min(720px,100%); max-height:calc(100vh - 40px); overflow:auto; padding:21px; border:1px solid var(--border); border-radius:12px; background:var(--surface); }
-    .modal-title { margin-bottom:18px; color:var(--cyan); font:700 15px 'Orbitron',sans-serif; letter-spacing:1.2px; text-transform:uppercase; }
+    .modal-title { margin-bottom:18px; color:var(--cyan); font:700 15px 'Exo 2',sans-serif; letter-spacing:1.2px; text-transform:uppercase; }
     .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:13px; }
     .form-group.full { grid-column:1 / -1; }
     textarea.control { min-height:92px; resize:vertical; }
@@ -205,10 +209,10 @@
 </head>
 <body>
   <header>
-    <div class="brand">
+    <button class="brand" type="button" onclick="openView('Painel')" aria-label="Ir para o painel inicial">
       <h1>ORDEM DE EXECUÇÃO</h1>
       <p>Dashboard Estratégico</p>
-    </div>
+    </button>
     <div class="header-actions">
       <button class="btn btn-primary" type="button" onclick="openPostModal()">Nova postagem</button>
       <button class="btn btn-ghost" type="button" onclick="openClientModal()">Novo cliente</button>
@@ -227,25 +231,29 @@
 
       <div class="page-header">
         <div class="page-heading">
-          <h2 id="pageTitle">Todos</h2>
-          <p id="pageDescription">Visão completa da operação.</p>
+          <h2 id="pageTitle">Painel</h2>
+          <p id="pageDescription">Visão geral da operação.</p>
         </div>
         <button class="btn btn-primary" id="primaryAction" type="button">Nova postagem</button>
       </div>
 
+      <div class="filter-actions" id="filterActions">
+        <button class="btn btn-ghost filter-toggle" id="filterToggle" type="button" onclick="toggleFilters()"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"></circle><path d="m16 16 4 4"></path></svg><span>Filtrar</span></button>
+      </div>
+
       <section class="filter-panel" id="filterPanel">
-        <div class="field">
+        <div class="field" id="filterStatusField">
           <label for="filterStatus">Status</label>
           <select class="control" id="filterStatus" onchange="applyFilters()">
             <option value="">Todos os status</option>
             <option>A fazer</option><option>Conferir</option><option>Refinar</option><option>Programado</option><option>Publicado</option>
           </select>
         </div>
-        <div class="field">
+        <div class="field" id="filterClientField">
           <label for="filterClient">Cliente</label>
           <select class="control" id="filterClient" onchange="applyFilters()"></select>
         </div>
-        <div class="field">
+        <div class="field" id="filterMonthField">
           <label for="filterMonth">Mês</label>
           <select class="control" id="filterMonth" onchange="applyFilters()">
             <option value="">Todos os meses</option>
@@ -254,15 +262,15 @@
             <option value="9">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
           </select>
         </div>
-        <div class="field">
+        <div class="field" id="filterYearField">
           <label for="filterYear">Ano</label>
           <select class="control" id="filterYear" onchange="applyFilters()"></select>
         </div>
-        <div class="field search-field">
-          <label for="filterSearch">Pesquisar</label>
+        <div class="field search-field" id="filterSearchField">
+          <label for="filterSearch" id="filterSearchLabel">Pesquisar</label>
           <input class="control" id="filterSearch" type="search" placeholder="Tema, observação ou cliente" oninput="applyFilters()">
         </div>
-        <button class="btn btn-ghost" type="button" onclick="clearFilters()">Limpar</button>
+        <button class="btn btn-ghost" id="clearFiltersButton" type="button" onclick="clearFilters()">Limpar</button>
       </section>
 
       <section class="summary-grid" id="summaryGrid"></section>
@@ -368,11 +376,12 @@
 
   <script>
     const STATUSES = ['A fazer','Conferir','Refinar','Programado','Publicado'];
-    const NAV_ITEMS = ['Todos','Clientes',...STATUSES,'Configurações'];
+    const NAV_ITEMS = ['Painel','Todos','Clientes',...STATUSES,'Configurações'];
     const COLORS = ['#00d4ff','#f0b429','#00e676','#ff4d67','#a29bfe','#ff9f43','#fd79a8','#55efc4','#74b9ff'];
     const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
     const SHORT_DAYS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
     const VIEW_TEXT = {
+      'Painel':'Visão geral da operação.',
       'Todos':'Visão completa da operação.',
       'Clientes':'Consulte, inclua e edite os clientes.',
       'A fazer':'Conteúdos que ainda precisam ser criados.',
@@ -383,7 +392,7 @@
       'Configurações':'Backup e operações protegidas do aplicativo.'
     };
 
-    let state = { view:'Todos', clientId:'', status:'', month:'', year:'', search:'' };
+    let state = { view:'Painel', clientId:'', status:'', month:'', year:'', search:'', filtersOpen:false };
     let editingPostId = null;
     let editingClientId = null;
     let selectedColor = COLORS[0];
@@ -420,15 +429,16 @@
     function openView(view) {
       state.view=view;
       if (STATUSES.includes(view)) state.status=view;
-      else if (view==='Todos' || view==='Clientes' || view==='Configurações') state.status='';
+      else if (view==='Painel' || view==='Todos' || view==='Clientes' || view==='Configurações') state.status='';
       if (view==='Clientes' || view==='Configurações') state.clientId='';
+      state.filtersOpen=view==='Todos';
       render();
     }
 
     function openClientWorkspace(id) {
       const client=getClients().find(item=>item.id===id);
       if(!client) return;
-      state.view='Todos'; state.clientId=id; state.status=''; state.month=''; state.year=''; state.search='';
+      state.view='Todos'; state.clientId=id; state.status=''; state.month=''; state.year=''; state.search=''; state.filtersOpen=true;
       render();
     }
 
@@ -449,20 +459,49 @@
     }
 
     function applyFilters() {
-      const selectedStatus=document.getElementById('filterStatus').value;
-      if(STATUSES.includes(state.view) && selectedStatus!==state.view) state.view=selectedStatus||'Todos';
-      state.status=selectedStatus;
-      state.clientId=document.getElementById('filterClient').value;
-      state.month=document.getElementById('filterMonth').value;
-      state.year=document.getElementById('filterYear').value;
+      if(state.view==='Painel' || state.view==='Todos') state.status=document.getElementById('filterStatus').value;
+      else if(STATUSES.includes(state.view)) state.status=state.view;
+      else state.status='';
+      if(state.view!=='Clientes') {
+        state.clientId=document.getElementById('filterClient').value;
+        state.month=document.getElementById('filterMonth').value;
+        state.year=document.getElementById('filterYear').value;
+      }
       state.search=document.getElementById('filterSearch').value.trim();
-      renderNav(); renderMainContent();
+      renderMainContent();
     }
 
     function clearFilters() {
       state.clientId=''; state.month=''; state.year=''; state.search='';
       state.status=STATUSES.includes(state.view) ? state.view : '';
       populateFilterOptions(); renderMainContent();
+    }
+
+    function toggleFilters() {
+      state.filtersOpen=!state.filtersOpen;
+      renderFilterControls();
+    }
+
+    function renderFilterControls() {
+      const isTodos=state.view==='Todos';
+      const isClients=state.view==='Clientes';
+      const supportsFilters=state.view!=='Configurações';
+      const isStage=STATUSES.includes(state.view);
+      const isOpen=isTodos || state.filtersOpen;
+      const panel=document.getElementById('filterPanel');
+      const actions=document.getElementById('filterActions');
+      const toggle=document.getElementById('filterToggle');
+      actions.classList.toggle('hidden',!supportsFilters || isTodos);
+      panel.classList.toggle('hidden',!supportsFilters || !isOpen);
+      panel.classList.toggle('clients-only',isClients);
+      toggle.setAttribute('aria-expanded',String(isOpen));
+      document.getElementById('filterStatusField').classList.toggle('hidden',isClients || isStage);
+      document.getElementById('filterClientField').classList.toggle('hidden',isClients);
+      document.getElementById('filterMonthField').classList.toggle('hidden',isClients);
+      document.getElementById('filterYearField').classList.toggle('hidden',isClients);
+      document.getElementById('clearFiltersButton').classList.toggle('hidden',false);
+      document.getElementById('filterSearchLabel').textContent=isClients?'Pesquisar cliente':'Pesquisar';
+      document.getElementById('filterSearch').placeholder=isClients?'Nome, nicho ou Instagram':'Tema, observação ou cliente';
     }
 
     function filteredPosts() {
@@ -489,7 +528,7 @@
       const title=client ? client.name : state.view;
       const description=client ? 'Todas as etapas e postagens deste cliente.' : VIEW_TEXT[state.view];
       const pageHeader=document.querySelector('.page-header');
-      pageHeader.classList.toggle('hidden',state.view==='Todos'&&!client);
+      pageHeader.classList.toggle('hidden',state.view==='Painel'&&!client);
       document.getElementById('pageTitle').textContent=title;
       document.getElementById('pageDescription').textContent=description;
       const action=document.getElementById('primaryAction');
@@ -501,7 +540,7 @@
 
     function renderSummary() {
       const section=document.getElementById('summaryGrid');
-      if(state.view!=='Todos') { section.classList.add('hidden'); return; }
+      if(state.view!=='Painel') { section.classList.add('hidden'); return; }
       section.classList.remove('hidden');
       let posts=getPosts();
       if(state.clientId) posts=posts.filter(post=>post.clientId===state.clientId);
@@ -518,7 +557,9 @@
       const section=document.getElementById('clientsSection');
       if(state.view!=='Clientes') { section.classList.add('hidden'); return; }
       section.classList.remove('hidden');
-      const clients=getClients(), posts=getPosts();
+      const query=state.search.toLowerCase();
+      const clients=getClients().filter(client=>!query || [client.name,client.niche,client.instagram].some(value=>String(value||'').toLowerCase().includes(query)));
+      const posts=getPosts();
       document.getElementById('clientsCount').textContent=`${clients.length} cliente${clients.length===1?'':'s'}`;
       document.getElementById('clientsGrid').innerHTML=clients.length ? clients.map(client=>{
         const clientPosts=posts.filter(post=>post.clientId===client.id);
@@ -531,7 +572,7 @@
       if(state.view==='Clientes'||state.view==='Configurações') { section.classList.add('hidden'); return; }
       section.classList.remove('hidden');
       const posts=filteredPosts(), clients=getClients();
-      document.getElementById('postsHeading').textContent=state.view==='Todos'?'Postagens':(state.status||'Postagens');
+      document.getElementById('postsHeading').textContent=state.view==='Painel'||state.view==='Todos'?'Postagens':(state.status||'Postagens');
       renderQuickFilters();
       document.getElementById('postsCount').textContent=`${posts.length} registro${posts.length===1?'':'s'}`;
       const body=document.getElementById('postsBody'), empty=document.getElementById('postsEmpty');
@@ -546,7 +587,7 @@
 
     function renderQuickFilters() {
       const container=document.getElementById('quickFilters');
-      if(state.view!=='Todos') { container.classList.add('hidden'); return; }
+      if(state.view!=='Painel') { container.classList.add('hidden'); return; }
       container.classList.remove('hidden');
       const options=[['','Todos'],['Publicado','Publicado'],['Programado','Programado'],['Conferir','Conferir'],['Refinar','Refinar'],['A fazer','Criar']];
       container.innerHTML=options.map(([value,label])=>`<button class="quick-filter ${state.status===value?'active':''}" type="button" onclick="setQuickStatus('${value}')">${label}</button>`).join('');
@@ -575,7 +616,7 @@
 
     function render() {
       updateAutomaticStatuses(); renderNav(); populateFilterOptions();
-      document.getElementById('filterPanel').classList.toggle('hidden',state.view==='Clientes'||state.view==='Configurações');
+      renderFilterControls();
       renderMainContent();
     }
 
@@ -595,7 +636,7 @@
 
     function renderCalendarSection() {
       const section=document.getElementById('calendarSection');
-      if(state.view!=='Todos' && state.view!=='Programado') { section.classList.add('hidden'); return; }
+      if(state.view!=='Painel' && state.view!=='Programado') { section.classList.add('hidden'); return; }
       section.classList.remove('hidden');
       document.getElementById('calendarHeading').textContent=state.view==='Programado'?'Calendário de postagens programadas':'Calendário';
       if(state.month && state.year) calendarDate=new Date(Number(state.year),Number(state.month)-1,1);
