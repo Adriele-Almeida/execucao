@@ -411,6 +411,8 @@
       .calendar-toolbar .view-buttons .btn { min-height:38px; font-size:13px; }
       .activity-item { font-size:14px; }
     }
+
+    .optional-card-toggle{width:100%;display:flex;justify-content:space-between;padding:0;border:0;background:transparent;color:var(--muted);font:600 12px 'Exo 2',sans-serif;letter-spacing:1px;text-align:left;cursor:pointer}.card-optional{margin-top:8px}.custom-field-card{display:grid;gap:7px;margin:12px 0;padding:12px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2)}.custom-field-card label{color:var(--faint);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase}.card-text-wrap{position:relative}.card-text-wrap textarea{padding-bottom:44px}.field-remove-link{justify-self:start;padding:4px 0;border:0;background:transparent;color:var(--red);font:600 11px 'Exo 2',sans-serif;cursor:pointer}.cards-management{grid-column:1/-1}.card-management-list{display:grid;gap:8px;max-height:360px;margin:13px 0;overflow:auto}.managed-card{display:flex;gap:10px;align-items:flex-start;padding:11px;border:1px solid var(--border);border-radius:8px;cursor:pointer}.managed-card small{display:block;margin-top:4px;color:var(--muted)}.nav-button{position:relative}.nav-button.has-new-order{border-color:var(--cyan);color:var(--cyan);box-shadow:inset 3px 0 0 var(--cyan)}.nav-order-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;margin-left:7px;border-radius:9px;background:var(--cyan);color:#071014;font-size:11px;font-weight:800}@media(max-width:760px){.custom-date-inputs{grid-template-columns:1fr 1fr}.custom-field-card{padding:10px}.managed-card small{font-size:12px}}
 </style>
 </head>
 <body>
@@ -568,6 +570,11 @@
               <div id="historyClearOptions"></div>
             </div>
           </article>
+          <article class="settings-card cards-management">
+            <h3>Cards</h3><p>Visualize, filtre e selecione os cards que deseja excluir.</p>
+            <div class="form-grid"><div class="field form-group"><label for="cardManageClient">Cliente</label><select class="control" id="cardManageClient" onchange="renderCardManagement()"></select></div><div class="field form-group"><label for="cardManageStatus">Status</label><select class="control" id="cardManageStatus" onchange="renderCardManagement()"><option value="">Todos os status</option><option value="none">Sem status</option><option value="criar">Criar</option><option value="conferir">Conferir</option><option value="refinar">Refinar</option><option value="programado">Programado</option><option value="publicado">Publicado</option></select></div></div>
+            <div class="card-management-list" id="cardManagementList"></div><button class="btn btn-danger" id="deleteSelectedCardsButton" type="button" onclick="deleteSelectedCards()" disabled>Excluir cards selecionados</button>
+          </article>
           <article class="settings-card hidden" id="accessManagementCard">
             <h3>Controle de acessos</h3>
             <p>Ative ou pause o acesso de cada pessoa cadastrada. Apenas a administradora vê esta área.</p>
@@ -621,10 +628,11 @@
       <div class="modal-title" id="customCardModalTitle">Novo card</div>
       <div class="form-grid">
         <div class="field form-group full"><label for="cardTitle">Título</label><input class="control" id="cardTitle" type="text"></div>
-        <div class="field form-group full"><label for="cardClient">Vincular a cliente</label><select class="control" id="cardClient"><option value="">Sem vínculo com cliente</option></select></div>
-        <div class="field form-group full"><label for="cardResponsible">Responsável</label><select class="control" id="cardResponsible"><option value="">Sem responsável</option></select></div>
-        <div class="field form-group full"><label for="cardObservations">Orientação principal</label><textarea class="control" id="cardObservations"></textarea></div>
-        <div class="field form-group full"><label>Campos personalizados</label><div id="customCardFields"></div><div class="settings-actions" style="margin-top:10px"><button class="btn btn-ghost btn-small" type="button" onclick="addCustomCardField('text')">+ Texto</button><button class="btn btn-ghost btn-small" type="button" onclick="addCustomCardField('date')">+ Data</button><button class="btn btn-ghost btn-small" type="button" onclick="addCustomCardField('link')">+ Link</button></div></div>
+        <div class="field form-group full"><button class="optional-card-toggle" type="button" onclick="toggleCardOptional('client')">Cliente <span>⌄</span></button><div class="card-optional hidden" id="cardClientSection"><select class="control" id="cardClient"><option value="">Sem vínculo com cliente</option></select></div></div>
+        <div class="field form-group full"><button class="optional-card-toggle" type="button" onclick="toggleCardOptional('responsible')">Responsável <span>⌄</span></button><div class="card-optional hidden" id="cardResponsibleSection"><select class="control" id="cardResponsible"><option value="">Sem responsável</option></select></div></div>
+        <div class="field form-group full"><label for="cardStatus">Status</label><select class="control" id="cardStatus"><option value=""></option><option value="criar">Criar</option><option value="conferir">Conferir</option><option value="refinar">Refinar</option><option value="programado">Programado</option><option value="publicado">Publicado</option></select></div>
+        <div class="field form-group full"><label for="cardObservations">Observação</label><textarea class="control" id="cardObservations"></textarea></div>
+        <div class="field form-group full"><div id="customCardFields"></div><div class="settings-actions card-field-actions"><button class="btn btn-ghost btn-small" type="button" onclick="addCustomCardField('text')">+ Texto</button><button class="btn btn-ghost btn-small" type="button" onclick="addCustomCardField('date')">+ Data</button><button class="btn btn-ghost btn-small" type="button" onclick="addCustomCardField('link')">+ Link</button></div></div>
       </div>
       <div class="modal-actions"><button class="btn btn-ghost" type="button" onclick="closeModal('customCardModal')">Cancelar</button><button class="btn btn-primary" type="button" onclick="saveCustomCard()">Salvar card</button></div>
     </div>
@@ -714,7 +722,8 @@
 
     function renderNav() {
       const items=currentProfile?.role==='admin' ? NAV_ITEMS : NAV_ITEMS.filter(name=>name!=='Configurações');
-      document.getElementById('mainNav').innerHTML=items.map(name=>`<button class="nav-button ${state.view===name?'active':''}" type="button" onclick="openView('${name}')">${name}</button>`).join('');
+      const orderCount=unreadCardNotifications().filter(item=>item.notification_type==='demanda').length;
+      document.getElementById('mainNav').innerHTML=items.map(name=>`<button class="nav-button ${state.view===name?'active':''} ${name==='Ordem de Execução'&&orderCount?'has-new-order':''}" type="button" onclick="openView('${name}')">${name}${name==='Ordem de Execução'&&orderCount?`<span class="nav-order-count">${Math.min(orderCount,99)}</span>`:''}</button>`).join('');
     }
 
     function openView(view) {
@@ -893,6 +902,17 @@
       renderMainContent();
     }
 
+    let selectedManagedCardIds = new Set();
+    function renderCardManagement() {
+      const clientSelect=document.getElementById('cardManageClient'), statusSelect=document.getElementById('cardManageStatus'), list=document.getElementById('cardManagementList'), button=document.getElementById('deleteSelectedCardsButton');
+      if(!clientSelect||!statusSelect||!list||!button) return;
+      const currentClient=clientSelect.value||'', currentStatus=statusSelect.value||'';
+      clientSelect.innerHTML='<option value="">Todos os clientes</option><option value="none">Sem cliente</option>'+getClients().map(client=>`<option value="${client.id}">${escapeHtml(client.name)}</option>`).join(''); clientSelect.value=currentClient;
+      const cards=cloudCards.filter(card=>(!currentClient||(currentClient==='none'?!card.client_id:card.client_id===currentClient))&&(!currentStatus||(currentStatus==='none'?!card.stage:card.stage===currentStatus)));
+      list.innerHTML=cards.length?cards.map(card=>{const client=getCardClient(card),owner=cardOwner(card),updated=new Date(card.updated_at||card.created_at),created=new Date(card.created_at);return `<label class="managed-card"><input type="checkbox" ${selectedManagedCardIds.has(card.id)?'checked':''} onchange="toggleManagedCard('${card.id}',this.checked)"><span><strong>${escapeHtml(card.title||'Sem título')}</strong><small>Cliente: ${escapeHtml(client?.name||'Sem cliente vinculado')} · Status: ${escapeHtml(stageLabel(card.stage))}</small><small>Atualização: ${updated.toLocaleDateString('pt-BR')} · ${updated.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})} · Registro: ${created.toLocaleDateString('pt-BR')} · ${created.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})} · Autora: ${escapeHtml(owner?.display_name||owner?.email||'Usuária removida')}</small></span></label>`;}).join(''):'<div class="activity-item">Nenhum card encontrado.</div>'; button.disabled=!selectedManagedCardIds.size;
+    }
+    function toggleManagedCard(id,checked) { if(checked) selectedManagedCardIds.add(id); else selectedManagedCardIds.delete(id); document.getElementById('deleteSelectedCardsButton').disabled=!selectedManagedCardIds.size; }
+    async function deleteSelectedCards() { const ids=[...selectedManagedCardIds]; if(!ids.length) return; if(!confirm(`Excluir ${ids.length} card(s) selecionado(s)? Esta ação não pode ser desfeita.`)) return; const {error}=await supabaseClient.from('custom_cards').delete().in('id',ids); if(error) return toast('Não foi possível excluir os cards selecionados.'); selectedManagedCardIds=new Set(); await loadCloudData(); render(); toast('Cards excluídos.'); }
     function renderSettings() {
       const section=document.getElementById('settingsSection');
       if(state.view!=='Configurações' || currentProfile?.role!=='admin') { section.classList.add('hidden'); return; }
@@ -904,6 +924,7 @@
       document.getElementById('deleteClientButton').disabled=true;
       renderNotificationClearOptions();
       renderHistoryClearOptions();
+      renderCardManagement();
     }
 
     function renderMainContent() {
@@ -1396,7 +1417,7 @@
 
     async function deleteClientFromSettings() {
       const id=document.getElementById('deleteClientSelect').value, client=getClients().find(item=>item.id===id); if(!client) return;
-      if(!confirm(`Excluir “${client.name}” e todas as postagens vinculadas? Esta ação não pode ser desfeita.`)) return;
+      if(!confirm(`Excluir “${client.name}”, todas as postagens, cards e registros vinculados? Esta ação não pode ser desfeita.`)) return;
       const {error}=await supabaseClient.from('clients').delete().eq('id',id);
       if(error) return toast('Não foi possível excluir o cliente.');
       await loadCloudData(); render(); toast('Cliente excluído.');
@@ -1446,7 +1467,7 @@
     }
     function renderNotificationCount() {
       const unreadActivities=visibleNotificationActivities().filter(item=>!activityReadAt||new Date(item.created_at)>new Date(activityReadAt));
-      const unread=unreadActivities.length+unreadCardNotifications().length;
+      const unread=unreadActivities.length;
       const count=document.getElementById('notificationCount');
       count.textContent=String(Math.min(unread,99)); count.style.display=unread?'block':'none';
     }
@@ -1518,22 +1539,22 @@
     }
 
     function splitCardDateValue(value='') { const [date='',time='']=String(value).split('|'); return {date,time}; }
+    function toggleCardOptional(kind,forceOpen) { const section=document.getElementById(kind==='client'?'cardClientSection':'cardResponsibleSection'); const open=forceOpen===undefined?section.classList.contains('hidden'):forceOpen; section.classList.toggle('hidden',!open); }
     function renderCustomCardFields() {
       const holder=document.getElementById('customCardFields');
       holder.innerHTML=cardFields.map(field=>{
-        const input=field.type==='text'
-          ? `<textarea class="control" placeholder="Texto" oninput="updateCustomCardField('${field.id}',this.value)">${escapeHtml(field.value||'')}</textarea>`
-          : field.type==='date'
-            ? (()=>{ const value=splitCardDateValue(field.value); return `<div class="custom-date-inputs"><input class="control" type="date" value="${escapeHtml(value.date)}" onchange="updateCustomCardDateField('${field.id}','date',this.value)"><input class="control" type="time" value="${escapeHtml(value.time)}" onchange="updateCustomCardDateField('${field.id}','time',this.value)"></div>`; })()
-            : `<input class="control" type="url" placeholder="https://" value="${escapeHtml(field.value||'')}" oninput="updateCustomCardField('${field.id}',this.value)">`;
-        return `<div class="custom-field-row">${input}<button class="btn btn-danger btn-small" type="button" onclick="removeCustomCardField('${field.id}')">Remover</button></div>`;
+        const remove=editingCardId?`<button class="field-remove-link" type="button" onclick="removeCustomCardField('${field.id}')">Remover campo</button>`:'';
+        if(field.type==='text') return `<div class="custom-field-card"><label>Título</label><input class="control" type="text" value="${escapeHtml(field.label||'')}" oninput="updateCustomCardField('${field.id}','label',this.value)"><label>Texto</label><div class="card-text-wrap"><textarea class="control" oninput="updateCustomCardField('${field.id}','value',this.value)">${escapeHtml(field.value||'')}</textarea><button class="btn btn-ghost caption-copy" type="button" onclick="copyCardField('${field.id}')">Copiar</button></div>${remove}</div>`;
+        if(field.type==='date') { const value=splitCardDateValue(field.value); return `<div class="custom-field-card"><div class="custom-date-inputs"><input class="control" type="date" value="${escapeHtml(value.date)}" onchange="updateCustomCardDateField('${field.id}','date',this.value)"><input class="control" type="time" value="${escapeHtml(value.time)}" onchange="updateCustomCardDateField('${field.id}','time',this.value)"></div>${remove}</div>`; }
+        return `<div class="custom-field-card"><label>Título</label><input class="control" type="text" value="${escapeHtml(field.label||'')}" oninput="updateCustomCardField('${field.id}','label',this.value)"><label>Link</label><input class="control" type="url" placeholder="https://" value="${escapeHtml(field.value||'')}" oninput="updateCustomCardField('${field.id}','value',this.value)">${remove}</div>`;
       }).join('');
     }
-    function addCustomCardField(type) { cardFields.push({id:`${Date.now()}-${Math.random()}`,type,value:''}); renderCustomCardFields(); }
-    function updateCustomCardField(id,value) { const field=cardFields.find(item=>item.id===id); if(field) field.value=value; }
+    function addCustomCardField(type) { cardFields.push({id:`${Date.now()}-${Math.random()}`,type,label:'',value:''}); renderCustomCardFields(); }
+    function updateCustomCardField(id,key,value) { const field=cardFields.find(item=>item.id===id); if(field) field[key]=value; }
     function updateCustomCardDateField(id,part,value) { const field=cardFields.find(item=>item.id===id); if(!field) return; const parsed=splitCardDateValue(field.value); parsed[part]=value; field.value=parsed.date+(parsed.time?'|'+parsed.time:''); }
-    function removeCustomCardField(id) { cardFields=cardFields.filter(item=>item.id!==id); renderCustomCardFields(); }
-    function stageLabel(stage='criar') { return ({criar:'Criar',conferir:'Conferir',refinar:'Refinar'})[stage]||'Criar'; }
+    function copyCardField(id) { const field=cardFields.find(item=>item.id===id); if(!field?.value) return toast('Não há texto para copiar.'); navigator.clipboard?.writeText(field.value).then(()=>toast('Texto copiado.')).catch(()=>toast('Não foi possível copiar o texto.')); }
+    function removeCustomCardField(id) { if(!editingCardId) return; if(!confirm('Remover este campo ao salvar a edição?')) return; cardFields=cardFields.filter(item=>item.id!==id); renderCustomCardFields(); }
+    function stageLabel(stage) { return ({criar:'Criar',conferir:'Conferir',refinar:'Refinar',programado:'Programado',publicado:'Publicado'})[stage]||'Sem status'; }
     function getCardClient(card) { return getClients().find(client=>client.id===card.client_id)||null; }
     function cardOwner(card) { return cloudProfiles.find(person=>person.id===card.created_by)||null; }
     function canEditCardOrientation(card) { return currentProfile?.role==='admin' || card.created_by===currentProfile?.id; }
@@ -1546,31 +1567,36 @@
     function openCustomCardModal(preselectedClientId='',cardId=null) {
       editingCardId=cardId; const card=cardId?cloudCards.find(item=>item.id===cardId):null;
       if(cardId&&!card) return;
-      if(card&&!canEditCardOrientation(card)) return toast('A orientação principal só pode ser alterada por quem criou o card ou pela administradora.');
-      document.getElementById('customCardModalTitle').textContent=card?'Editar orientação':'Novo card';
-      fillCardSelects(card,preselectedClientId); document.getElementById('cardTitle').value=card?.title||''; document.getElementById('cardObservations').value=card?.observations||'';
-      cardFields=(card?.fields||[]).map(field=>({id:`${Date.now()}-${Math.random()}`,type:field.type,value:field.value||''})); renderCustomCardFields(); document.getElementById('customCardModal').classList.add('open');
+      if(card&&!canEditCardOrientation(card)) return toast('A observação só pode ser alterada por quem criou o card ou pela administradora.');
+      document.getElementById('customCardModalTitle').textContent=card?'Editar card':'Novo card';
+      fillCardSelects(card,preselectedClientId);
+      document.getElementById('cardTitle').value=card?.title||'';
+      document.getElementById('cardStatus').value=card?.stage||'';
+      document.getElementById('cardObservations').value=card?.observations||'';
+      toggleCardOptional('client',Boolean(card?.client_id||preselectedClientId));
+      toggleCardOptional('responsible',Boolean(card?.responsible_id));
+      cardFields=(card?.fields||[]).map(field=>({id:`${Date.now()}-${Math.random()}`,type:field.type,label:field.label||'',value:field.value||''}));
+      renderCustomCardFields(); document.getElementById('customCardModal').classList.add('open');
     }
     async function notifyCardRecipient(cardId,recipientId,notificationType) { if(!recipientId||recipientId===currentProfile.id) return; await supabaseClient.from('card_notifications').insert({card_id:cardId,recipient_id:recipientId,notification_type:notificationType,created_by:currentProfile.id}); }
     async function saveCustomCard() {
-      const title=document.getElementById('cardTitle').value.trim(); if(!title) return toast('Informe o título do card.');
-      const fields=cardFields.filter(field=>field.value.trim()).map(field=>({type:field.type,value:field.value.trim()}));
-      const payload={title,client_id:document.getElementById('cardClient').value||null,responsible_id:document.getElementById('cardResponsible').value||null,observations:document.getElementById('cardObservations').value.trim()||null,fields,updated_by:currentProfile.id};
+      const fields=cardFields.filter(field=>String(field.value||'').trim()||String(field.label||'').trim()).map(field=>({type:field.type,label:(field.label||'').trim()||null,value:(field.value||'').trim()}));
+      const payload={title:document.getElementById('cardTitle').value.trim()||null,client_id:document.getElementById('cardClient').value||null,responsible_id:document.getElementById('cardResponsible').value||null,stage:document.getElementById('cardStatus').value||null,observations:document.getElementById('cardObservations').value.trim()||null,fields,updated_by:currentProfile.id};
       let cardId=editingCardId, previousResponsible='';
-      if(editingCardId) { const existing=cloudCards.find(card=>card.id===editingCardId); previousResponsible=existing?.responsible_id||''; const {error}=await supabaseClient.from('custom_cards').update(payload).eq('id',editingCardId); if(error) return toast('Não foi possível salvar a orientação do card.'); }
-      else { const {data,error}=await supabaseClient.from('custom_cards').insert({...payload,stage:'criar',created_by:currentProfile.id}).select().single(); if(error) return toast('Não foi possível salvar o card.'); cardId=data.id; }
+      if(editingCardId) { const existing=cloudCards.find(card=>card.id===editingCardId); previousResponsible=existing?.responsible_id||''; const {error}=await supabaseClient.from('custom_cards').update(payload).eq('id',editingCardId); if(error) return toast('Não foi possível salvar o card.'); }
+      else { const {data,error}=await supabaseClient.from('custom_cards').insert({...payload,created_by:currentProfile.id}).select().single(); if(error) return toast('Não foi possível salvar o card.'); cardId=data.id; }
       if(payload.responsible_id&&payload.responsible_id!==previousResponsible) await notifyCardRecipient(cardId,payload.responsible_id,'demanda');
       closeModal('customCardModal'); editingCardId=null; await loadCloudData(); render(); toast('Card salvo.');
     }
     function renderCardSummary(card) {
       const client=getCardClient(card), responsible=cloudProfiles.find(person=>person.id===card.responsible_id), color=client?.color||'var(--cyan)';
-      return `<button class="custom-card" type="button" style="border-left-color:${escapeHtml(color)}" onclick="openCardDetail('${card.id}')"><h4>${escapeHtml(card.title||'Sem título')}</h4><div class="card-client-name" style="color:${escapeHtml(color)}">${escapeHtml(client?.name||'Sem cliente vinculado')}</div><time>Registrado em ${new Date(card.created_at).toLocaleString('pt-BR')}</time><div class="card-meta"><span class="badge">${stageLabel(card.stage)}</span>${responsible?`<span class="badge">${escapeHtml(responsible.display_name||responsible.email)}</span>`:''}</div></button>`;
+      return `<button class="custom-card" type="button" style="border-left-color:${escapeHtml(color)}" onclick="openCardDetail('${card.id}')"><h4>${escapeHtml(card.title||'Sem título')}</h4><div class="card-client-name" style="color:${escapeHtml(color)}">${escapeHtml(client?.name||'Sem cliente vinculado')}</div><time>Registrado em ${new Date(card.created_at).toLocaleString('pt-BR')}</time><div class="card-meta">${card.stage?`<span class="badge">${stageLabel(card.stage)}</span>`:''}${responsible?`<span class="badge">${escapeHtml(responsible.display_name||responsible.email)}</span>`:''}</div></button>`;
     }
     function renderCustomCards() {
-      const section=document.getElementById('customCardsSection'), inClient=state.view==='Todos'&&Boolean(state.clientId), cardStage=String(state.view||'').toLowerCase(), isWorkflowStage=['criar','conferir','refinar'].includes(cardStage);
+      const section=document.getElementById('customCardsSection'), inClient=state.view==='Todos'&&Boolean(state.clientId), cardStage=String(state.view||'').toLowerCase(), isWorkflowStage=STATUSES.map(status=>status.toLowerCase()).includes(cardStage);
       if(!isWorkflowStage&&!inClient) { section.classList.add('hidden'); return; }
       section.classList.remove('hidden'); document.getElementById('customCardsHeading').textContent=inClient?'Cards do cliente':`Cards — ${stageLabel(cardStage)}`;
-      const grid=document.getElementById('customCardsGrid'), cards=inClient?cloudCards.filter(card=>card.client_id===state.clientId):cloudCards.filter(card=>(card.stage||'criar')===cardStage);
+      const grid=document.getElementById('customCardsGrid'), cards=inClient?cloudCards.filter(card=>card.client_id===state.clientId):cloudCards.filter(card=>card.stage===cardStage);
       grid.innerHTML=cards.length?cards.map(renderCardSummary).join(''):`<div class="empty-state"><strong>Nenhum card em ${stageLabel(cardStage)}</strong><span>Use “Novo card” para registrar um item.</span></div>`;
     }
     function cardFieldsHtml(card) { return (card.fields||[]).map(field=>{ if(field.type==='link') { const url=safeUrl(field.value); return url?`<p><a href="${url}" target="_blank" rel="noopener">Abrir link</a></p>`:''; } if(field.type==='date') { const value=splitCardDateValue(field.value); return value.date?`<p>${formatDate(value.date)}${value.time?` · ${escapeHtml(value.time)}`:''}</p>`:''; } return `<p>${escapeHtml(field.value)}</p>`; }).join(''); }
@@ -1578,14 +1604,14 @@
       const card=cloudCards.find(item=>item.id===cardId); if(!card) return;
       const client=getCardClient(card),owner=cardOwner(card),responsible=cloudProfiles.find(person=>person.id===card.responsible_id),color=client?.color||'var(--cyan)',updates=cloudCardUpdates.filter(item=>item.card_id===card.id),canEdit=canEditCardOrientation(card);
       document.getElementById('cardDetailTitle').textContent=card.title||'Card';
-      document.getElementById('cardDetailContent').innerHTML=`<div class="card-client-name" style="color:${escapeHtml(color)}">${escapeHtml(client?.name||'Sem cliente vinculado')}</div><p style="margin-top:8px;color:var(--muted)">Criado por ${escapeHtml(owner?.display_name||owner?.email||'Usuária removida')} em ${new Date(card.created_at).toLocaleString('pt-BR')}</p><div class="card-detail-section"><h4>Orientação principal</h4>${card.observations?`<p>${escapeHtml(card.observations)}</p>`:''}${cardFieldsHtml(card)}${canEdit?`<button class="btn btn-ghost btn-small" type="button" onclick="closeModal('cardDetailModal');openCustomCardModal('', '${card.id}')">Editar orientação</button>`:''}</div><div class="card-detail-section"><h4>Andamento</h4><div class="form-grid"><div class="field form-group"><label for="cardStageAction">Etapa</label><select class="control" id="cardStageAction"><option value="criar">Criar</option><option value="conferir">Conferir</option><option value="refinar">Refinar</option></select></div><div class="field form-group"><label>Responsável</label><div class="control" style="display:flex;align-items:center">${escapeHtml(responsible?.display_name||responsible?.email||'Sem responsável')}</div></div><div class="field form-group full"><label for="cardProgressText">Registrar execução ou observação</label><textarea class="control" id="cardProgressText"></textarea></div></div><div class="modal-actions"><button class="btn btn-ghost" type="button" onclick="closeModal('cardDetailModal')">Fechar</button><button class="btn btn-primary" type="button" onclick="saveCardProgress('${card.id}')">Registrar atualização</button></div></div><div class="card-detail-section"><h4>Histórico do card</h4><div class="card-history">${updates.length?updates.map(update=>`<div class="card-history-item"><strong>${escapeHtml(update.author?.display_name||update.author?.email||'Usuária')}</strong> ${update.action_type==='mudanca_de_etapa'?`moveu de ${stageLabel(update.from_stage)} para ${stageLabel(update.to_stage)}`:(update.action_type==='execucao'?'registrou uma execução':'adicionou uma observação')}${update.content?`<p>${escapeHtml(update.content)}</p>`:''}<time>${new Date(update.created_at).toLocaleString('pt-BR')}</time></div>`).join(''):'<p>Nenhuma atualização registrada.</p>'}</div></div>`;
+      document.getElementById('cardDetailContent').innerHTML=`<div class="card-client-name" style="color:${escapeHtml(color)}">${escapeHtml(client?.name||'Sem cliente vinculado')}</div><p style="margin-top:8px;color:var(--muted)">Criado por ${escapeHtml(owner?.display_name||owner?.email||'Usuária removida')} em ${new Date(card.created_at).toLocaleString('pt-BR')}</p><div class="card-detail-section"><h4>Observação</h4>${card.observations?`<p>${escapeHtml(card.observations)}</p>`:''}${cardFieldsHtml(card)}${canEdit?`<button class="btn btn-ghost btn-small" type="button" onclick="closeModal('cardDetailModal');openCustomCardModal('', '${card.id}')">Editar orientação</button>`:''}</div><div class="card-detail-section"><h4>Andamento</h4><div class="form-grid"><div class="field form-group"><label for="cardStageAction">Status</label><select class="control" id="cardStageAction"><option value=""></option><option value="criar">Criar</option><option value="conferir">Conferir</option><option value="refinar">Refinar</option><option value="programado">Programado</option><option value="publicado">Publicado</option></select></div><div class="field form-group"><label>Responsável</label><div class="control" style="display:flex;align-items:center">${escapeHtml(responsible?.display_name||responsible?.email||'Sem responsável')}</div></div><div class="field form-group full"><label for="cardProgressText">Registrar execução ou observação</label><textarea class="control" id="cardProgressText"></textarea></div></div><div class="modal-actions"><button class="btn btn-ghost" type="button" onclick="closeModal('cardDetailModal')">Fechar</button><button class="btn btn-primary" type="button" onclick="saveCardProgress('${card.id}')">Registrar atualização</button></div></div><div class="card-detail-section"><h4>Histórico do card</h4><div class="card-history">${updates.length?updates.map(update=>`<div class="card-history-item"><strong>${escapeHtml(update.author?.display_name||update.author?.email||'Usuária')}</strong> ${update.action_type==='mudanca_de_etapa'?`moveu de ${stageLabel(update.from_stage)} para ${stageLabel(update.to_stage)}`:(update.action_type==='execucao'?'registrou uma execução':'adicionou uma observação')}${update.content?`<p>${escapeHtml(update.content)}</p>`:''}<time>${new Date(update.created_at).toLocaleString('pt-BR')}</time></div>`).join(''):'<p>Nenhuma atualização registrada.</p>'}</div></div>`;
       document.getElementById('cardStageAction').value=card.stage||'criar'; document.getElementById('cardDetailModal').classList.add('open');
     }
     async function saveCardProgress(cardId) {
       const card=cloudCards.find(item=>item.id===cardId); if(!card) return;
-      const toStage=document.getElementById('cardStageAction').value,content=document.getElementById('cardProgressText').value.trim(),changedStage=(card.stage||'criar')!==toStage;
+      const toStage=document.getElementById('cardStageAction').value,content=document.getElementById('cardProgressText').value.trim(),changedStage=(card.stage||'')!==toStage;
       if(!content&&!changedStage) return toast('Registre uma observação ou escolha outra etapa.');
-      const {error}=await supabaseClient.from('card_updates').insert({card_id:cardId,author_id:currentProfile.id,action_type:changedStage?'mudanca_de_etapa':'observacao',content:content||null,from_stage:changedStage?(card.stage||'criar'):null,to_stage:changedStage?toStage:null});
+      const {error}=await supabaseClient.from('card_updates').insert({card_id:cardId,author_id:currentProfile.id,action_type:changedStage?'mudanca_de_etapa':'observacao',content:content||null,from_stage:changedStage?(card.stage||null):null,to_stage:changedStage?(toStage||null):null});
       if(error) return toast('Não foi possível atualizar o card.');
       if(changedStage&&toStage==='conferir') await notifyCardRecipient(cardId,card.created_by,'aprovacao');
       closeModal('cardDetailModal'); await loadCloudData(); render(); toast('Atualização registrada.');
