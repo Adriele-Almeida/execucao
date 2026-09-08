@@ -1450,7 +1450,7 @@
     }
     function activityText(item) {
       const name=item.after_data?.title||item.before_data?.title||item.after_data?.name||item.before_data?.name||'registro';
-      const actor=item.actor?.display_name||item.actor?.email||'Uma usuária';
+      const actor=item.actor?.display_name||item.actor?.email||'Sistema';
       const verb={insert:'criou',update:'atualizou',delete:'excluiu'}[item.action]||'alterou';
       return `${actor} ${verb} ${item.entity_type==='client'?'o cliente':item.entity_type==='card'?'o card':item.entity_type==='profile'?'o perfil':'a postagem'} “${name}”`;
     }
