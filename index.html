@@ -182,6 +182,7 @@
     .profile-upload-row input { display:none; }
     .profile-contact-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
     .profile-contact-actions .btn[disabled] { cursor:not-allowed; opacity:.42; }
+    .client-instagram-link{display:inline-flex;align-items:center;gap:6px;margin-top:5px;color:var(--cyan);font-weight:700}.client-instagram-link svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2}.client-detail-links{display:flex;gap:9px;flex-wrap:wrap;margin:12px 0}.client-detail-info{padding:14px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);margin:12px 0}.client-detail-info h4{margin-bottom:7px}.custom-field-card .caption-copy{position:static;align-self:flex-end;margin-top:8px}.card-text-wrap{display:flex;flex-direction:column;gap:8px}.card-text-wrap textarea{min-height:120px;scrollbar-width:thin;scrollbar-color:var(--cyan) var(--surface-2)}.card-text-wrap textarea::-webkit-scrollbar{width:8px}.card-text-wrap textarea::-webkit-scrollbar-track{background:var(--surface-2);border-radius:8px}.card-text-wrap textarea::-webkit-scrollbar-thumb{background:var(--cyan);border-radius:8px}.card-assignment-control{font-weight:700;color:var(--muted)}
     .hidden { display:none !important; }
     .auth-screen.auth-checking { visibility:hidden; pointer-events:none; }
 
@@ -422,11 +423,11 @@
       <p>Dashboard Estratégico</p>
     </button>
     <div class="header-clock" id="headerClock" aria-label="Data e horário atual"></div>
-    <button class="header-user hidden" id="headerUser" type="button" onclick="openOwnProfile()" aria-label="Abrir meu perfil"></button>
     <div class="header-actions">
       <button class="btn btn-primary" type="button" onclick="openPostModal()">Nova postagem</button>
       <button class="btn btn-ghost" type="button" onclick="openClientModal()">Novo cliente</button>
       <button class="icon-btn notification-button" type="button" onclick="toggleActivity()" aria-label="Abrir atualizações"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path><path d="M10 22h4"></path></svg><span class="notification-count" id="notificationCount">0</span></button>
+      <button class="header-user hidden" id="headerUser" type="button" onclick="openOwnProfile()" aria-label="Abrir meu perfil"></button>
       <button class="account-button" id="accountButton" type="button" onclick="toggleAccountMenu()" aria-label="Abrir menu do perfil" title="Perfil">⋯</button>
     </div>
   </header>
@@ -573,7 +574,7 @@
           </article>
           <article class="settings-card cards-management">
             <h3>Cards</h3><p>Visualize, filtre e selecione os cards que deseja excluir.</p>
-            <div class="form-grid"><div class="field form-group"><label for="cardManageClient">Cliente</label><select class="control" id="cardManageClient" onchange="renderCardManagement()"></select></div><div class="field form-group"><label for="cardManageStatus">Status</label><select class="control" id="cardManageStatus" onchange="renderCardManagement()"><option value="">Todos os status</option><option value="none">Sem status</option><option value="criar">Criar</option><option value="conferir">Conferir</option><option value="refinar">Refinar</option><option value="programado">Programado</option><option value="publicado">Publicado</option></select></div></div>
+            <div class="form-grid"><div class="field form-group"><label for="cardManageClient">Cliente</label><select class="control" id="cardManageClient" onchange="renderCardManagement()"></select></div><div class="field form-group"><label for="cardManageStatus">Status</label><select class="control" id="cardManageStatus" onchange="renderCardManagement()"><option value="">Todos os status</option><option value="none">Sem status</option><option value="criar">Criar</option><option value="conferir">Conferir</option><option value="refinar">Refinar</option><option value="pronto">Pronto</option><option value="programar">Programar</option><option value="programado">Programado</option><option value="publicado">Publicado</option></select></div></div>
             <div class="card-management-list" id="cardManagementList"></div><button class="btn btn-danger" id="deleteSelectedCardsButton" type="button" onclick="deleteSelectedCards()" disabled>Excluir cards selecionados</button>
           </article>
           <article class="settings-card hidden" id="accessManagementCard">
@@ -614,7 +615,9 @@
       <div class="form-grid">
         <div class="field form-group full"><label for="cName">Nome</label><input class="control" id="cName" type="text"></div>
         <div class="field form-group"><label for="cInstagram">Instagram</label><input class="control" id="cInstagram" type="url" placeholder="https://instagram.com/perfil"></div>
-        <div class="field form-group"><label for="cNiche">Nicho</label><input class="control" id="cNiche" type="text"></div>
+        <div class="field form-group"><label for="cSite">Site</label><input class="control" id="cSite" type="url" placeholder="https://"></div>
+        <div class="field form-group full"><label for="cNiche">Nicho</label><input class="control" id="cNiche" type="text"></div>
+        <div class="field form-group full"><label>Informações personalizadas</label><div id="clientExtraFields"></div><div class="settings-actions card-field-actions"><button class="btn btn-ghost btn-small" type="button" onclick="addClientField('text')">+ Texto</button><button class="btn btn-ghost btn-small" type="button" onclick="addClientField('date')">+ Data</button><button class="btn btn-ghost btn-small" type="button" onclick="addClientField('link')">+ Link</button></div></div>
         <div class="field form-group full"><label>Cor de identificação</label><div class="color-options" id="colorOptions"></div></div>
       </div>
       <div class="modal-actions">
@@ -624,18 +627,20 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="clientDetailModal" role="dialog" aria-modal="true" aria-labelledby="clientDetailTitle"><div class="modal"><div class="modal-title" id="clientDetailTitle">Cliente</div><div id="clientDetailContent"></div><div class="modal-actions"><button class="btn btn-ghost" type="button" onclick="closeModal('clientDetailModal')">Fechar</button><button class="btn btn-primary" type="button" id="clientDetailEdit">Editar cliente</button></div></div></div>
+
   <div class="modal-overlay" id="customCardModal" role="dialog" aria-modal="true" aria-labelledby="customCardModalTitle">
     <div class="modal">
       <div class="modal-title" id="customCardModalTitle">Novo card</div>
       <div class="form-grid">
         <div class="field form-group full"><label for="cardTitle">Título</label><input class="control" id="cardTitle" type="text"></div>
-        <div class="field form-group full"><button class="optional-card-toggle" type="button" aria-expanded="false" onclick="toggleCardOptional('client',undefined,this)">Cliente <span>⌄</span></button><div class="card-optional hidden" id="cardClientSection"><select class="control" id="cardClient"><option value="">Sem vínculo com cliente</option></select></div></div>
-        <div class="field form-group full"><button class="optional-card-toggle" type="button" aria-expanded="false" onclick="toggleCardOptional('responsible',undefined,this)">Responsável <span>⌄</span></button><div class="card-optional hidden" id="cardResponsibleSection"><select class="control" id="cardResponsible"><option value="">Sem responsável</option></select></div></div>
-        <div class="field form-group full"><label for="cardStatus">Status</label><select class="control" id="cardStatus"><option value=""></option><option value="criar">Criar</option><option value="conferir">Conferir</option><option value="refinar">Refinar</option><option value="programado">Programado</option><option value="publicado">Publicado</option></select></div>
+        <div class="field form-group"><select class="control card-assignment-control" id="cardClient" aria-label="Cliente"><option value="">Cliente</option></select></div>
+        <div class="field form-group"><select class="control card-assignment-control" id="cardResponsible" aria-label="Responsável"><option value="">Responsável</option></select></div>
+        <div class="field form-group full"><label for="cardStatus">Status</label><select class="control" id="cardStatus"><option value=""></option><option value="criar">Criar</option><option value="conferir">Conferir</option><option value="refinar">Refinar</option><option value="pronto">Pronto</option><option value="programar">Programar</option><option value="programado">Programado</option><option value="publicado">Publicado</option></select></div>
         <div class="field form-group full"><label for="cardObservations">Observação</label><textarea class="control" id="cardObservations"></textarea></div>
         <div class="field form-group full"><div id="customCardFields"></div><div class="settings-actions card-field-actions"><button class="btn btn-ghost btn-small" type="button" onclick="addCustomCardField('text')">+ Texto</button><button class="btn btn-ghost btn-small" type="button" onclick="addCustomCardField('date')">+ Data</button><button class="btn btn-ghost btn-small" type="button" onclick="addCustomCardField('link')">+ Link</button></div></div>
       </div>
-      <div class="modal-actions"><button class="btn btn-ghost" type="button" onclick="closeModal('customCardModal')">Cancelar</button><button class="btn btn-primary" type="button" onclick="saveCustomCard()">Salvar card</button></div>
+      <div class="modal-actions"><button class="btn btn-ghost" type="button" onclick="cancelCustomCard()">Cancelar</button><button class="btn btn-primary" type="button" onclick="saveCustomCard()">Salvar card</button></div>
     </div>
   </div>
 
@@ -673,7 +678,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    const STATUSES = ['Criar','Conferir','Refinar','Programado','Publicado'];
+    const STATUSES = ['Criar','Conferir','Refinar','Pronto','Programar','Programado','Publicado'];
     const NAV_ITEMS = ['Painel','Ordem de Execução','Todos','Clientes',...STATUSES,'Configurações'];
     const COLORS = ['#00d4ff','#f0b429','#00e676','#ff4d67','#a29bfe','#ff9f43','#fd79a8','#55efc4','#74b9ff'];
     const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -686,6 +691,8 @@
       'Criar':'Conteúdos que ainda precisam ser criados.',
       'Conferir':'Conteúdos prontos que aguardam conferência.',
       'Refinar':'Conteúdos que precisam de ajustes finos.',
+      'Pronto':'Conteúdos finalizados e prontos para serem programados.',
+      'Programar':'Conteúdos em preparação para agendamento.',
       'Programado':'Postagens com data e horário definidos.',
       'Publicado':'Histórico das postagens realizadas.',
       'Configurações':'Backup e operações protegidas do aplicativo.'
@@ -737,11 +744,15 @@
       render();
     }
 
+    function clientDetailFieldsHtml(client) { return (client.details||[]).map(field=>{ if(field.type==='link') { const url=safeUrl(field.value); return url?`<p><a href="${url}" target="_blank" rel="noopener">Abrir link</a></p>`:''; } if(field.type==='date') { const v=splitCardDateValue(field.value); return v.date?`<p>${formatDate(v.date)}${v.time?` · ${escapeHtml(v.time)}`:''}</p>`:''; } return `<div class="client-detail-info">${field.label?`<h4>${escapeHtml(field.label)}</h4>`:''}<p>${escapeHtml(field.value||'')}</p></div>`; }).join(''); }
     function openClientWorkspace(id) {
-      const client=getClients().find(item=>item.id===id);
-      if(!client) return;
-      state.view='Todos'; state.clientId=id; state.status=''; state.month=''; state.year=''; state.search=''; state.filtersOpen=true;
-      render();
+      const client=getClients().find(item=>item.id===id); if(!client) return;
+      const posts=getPosts().filter(post=>post.clientId===id), cards=cloudCards.filter(card=>card.client_id===id);
+      document.getElementById('clientDetailTitle').textContent=client.name;
+      const instagram=safeUrl(client.instagram), site=safeUrl(client.site);
+      document.getElementById('clientDetailContent').innerHTML=`<p style="color:${escapeHtml(client.color||'var(--cyan)')}">${escapeHtml(client.niche||'')}</p><div class="client-detail-links">${instagram?`<a href="${instagram}" target="_blank" rel="noopener">${contactIcon('instagram')} Instagram</a>`:''}${site?`<a href="${site}" target="_blank" rel="noopener">Site</a>`:''}</div>${clientDetailFieldsHtml(client)}<div class="client-detail-info"><p>${posts.length} postagem(ns) e ${cards.length} card(s) vinculados.</p></div>`;
+      document.getElementById('clientDetailEdit').onclick=()=>{closeModal('clientDetailModal');openClientModal(id);};
+      document.getElementById('clientDetailModal').classList.add('open');
     }
 
     function populateFilterOptions() {
@@ -866,7 +877,7 @@
       document.getElementById('clientsCount').textContent=`${clients.length} cliente${clients.length===1?'':'s'}`;
       document.getElementById('clientsGrid').innerHTML=clients.length ? clients.map(client=>{
         const clientPosts=posts.filter(post=>post.clientId===client.id);
-        return `<article class="client-card"><div class="client-card-head"><span class="client-dot" style="background:${client.color||'#00d4ff'}"></span><h4>${escapeHtml(client.name)}</h4></div><div class="client-meta">${escapeHtml(client.niche||'Nicho não informado')}${client.instagram?`<br><a href="${safeUrl(client.instagram)}" target="_blank" rel="noopener">Abrir Instagram</a>`:''}</div><div class="client-stats">${STATUSES.map(status=>`<span class="mini-stat">${status}: ${clientPosts.filter(post=>post.status===status).length}</span>`).join('')}</div><div class="client-actions"><button class="btn btn-primary btn-small" type="button" onclick="openClientWorkspace('${client.id}')">Abrir cliente</button><button class="btn btn-ghost btn-small" type="button" onclick="openClientModal('${client.id}')">Editar</button></div></article>`;
+        return `<article class="client-card"><div class="client-card-head"><span class="client-dot" style="background:${client.color||'#00d4ff'}"></span><h4>${escapeHtml(client.name)}</h4></div><div class="client-meta">${escapeHtml(client.niche||'Nicho não informado')}${client.instagram?`<br><a class="client-instagram-link" href="${safeUrl(client.instagram)}" target="_blank" rel="noopener">${contactIcon('instagram')} Instagram</a>`:''}</div><div class="client-stats">${STATUSES.map(status=>`<span class="mini-stat">${status}: ${clientPosts.filter(post=>post.status===status).length}</span>`).join('')}</div><div class="client-actions"><button class="btn btn-primary btn-small" type="button" onclick="openClientWorkspace('${client.id}')">Abrir cliente</button><button class="btn btn-ghost btn-small" type="button" onclick="openClientModal('${client.id}')">Editar</button></div></article>`;
       }).join('') : '<div class="empty-state"><strong>Nenhum cliente cadastrado</strong><span>Use “Novo cliente” para começar.</span></div>';
     }
 
@@ -1036,7 +1047,8 @@
     }
 
     function toggleScheduleFields() { document.getElementById('timeField')?.classList.remove('hidden'); }
-    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+    function closeModal(id) { if(id==='customCardModal') return; document.getElementById(id).classList.remove('open'); }
+    async function cancelCustomCard() { if(!confirm('Descartar este preenchimento e o rascunho salvo?')) return; if(editingCardId) await supabaseClient.from('custom_cards').delete().eq('id',editingCardId).eq('is_draft',true); editingCardId=null; draftCardId=null; cardFields=[]; document.getElementById('customCardModal').classList.remove('open'); await loadCloudData(); render(); }
 
     function savePost() {
       const title=document.getElementById('pTheme').value.trim()||null, status=document.getElementById('pStatus').value;
@@ -1065,12 +1077,26 @@
       document.getElementById('clientModalTitle').textContent=client?'Editar cliente':'Novo cliente';
       document.getElementById('cName').value=client?.name||'';
       document.getElementById('cInstagram').value=client?.instagram||'';
+      document.getElementById('cSite').value=client?.site||'';
       document.getElementById('cNiche').value=client?.niche||'';
+      clientFields=(client?.details||[]).map(item=>({id:`${Date.now()}-${Math.random()}`,type:item.type||'text',label:item.label||'',value:item.value||''}));
+      renderClientFields();
       document.getElementById('colorOptions').innerHTML=COLORS.map(color=>`<button class="color-option ${color===selectedColor?'selected':''}" style="background:${color}" type="button" aria-label="Selecionar cor" onclick="selectColor('${color}',this)"></button>`).join('');
       document.getElementById('clientModal').classList.add('open');
     }
 
     function selectColor(color,button) { selectedColor=color; document.querySelectorAll('.color-option').forEach(item=>item.classList.remove('selected')); button.classList.add('selected'); }
+    function renderClientFields() {
+      const holder=document.getElementById('clientExtraFields'); if(!holder) return;
+      holder.innerHTML=clientFields.map(field=>{
+        if(field.type==='link') return `<div class="custom-field-card"><input class="control" type="url" aria-label="Link" placeholder="https://" value="${escapeHtml(field.value||'')}" oninput="updateClientField('${field.id}','value',this.value)"></div>`;
+        if(field.type==='date') { const value=splitCardDateValue(field.value); return `<div class="custom-field-card"><div class="custom-date-inputs"><input class="control" type="date" value="${escapeHtml(value.date)}" onchange="updateClientDateField('${field.id}','date',this.value)"><input class="control" type="time" value="${escapeHtml(value.time)}" onchange="updateClientDateField('${field.id}','time',this.value)"></div></div>`; }
+        return `<div class="custom-field-card"><label>Título</label><input class="control" type="text" value="${escapeHtml(field.label||'')}" oninput="updateClientField('${field.id}','label',this.value)"><label>Texto</label><textarea class="control" oninput="updateClientField('${field.id}','value',this.value)">${escapeHtml(field.value||'')}</textarea></div>`;
+      }).join('');
+    }
+    function addClientField(type) { clientFields.push({id:`${Date.now()}-${Math.random()}`,type,label:'',value:''}); renderClientFields(); }
+    function updateClientField(id,key,value) { const field=clientFields.find(item=>item.id===id); if(field) field[key]=value; }
+    function updateClientDateField(id,part,value) { const field=clientFields.find(item=>item.id===id); if(!field) return; const parsed=splitCardDateValue(field.value); parsed[part]=value; field.value=parsed.date+(parsed.time?'|'+parsed.time:''); }
 
     function saveClient() {
       const name=document.getElementById('cName').value.trim(); if(!name) return toast('Informe o nome do cliente.');
@@ -1114,9 +1140,7 @@
     }
 
     function updateAutomaticStatuses() {
-      const now=new Date(), posts=getPosts(); let changed=false;
-      const updated=posts.map(post=>{ if(post.status==='Programado'&&post.date&&post.hora&&new Date(`${post.date}T${post.hora}:00`)<=now) { changed=true; return {...post,status:'Publicado',updatedAt:Date.now()}; } return post; });
-      if(changed) savePosts(updated);
+      /* Publicações programadas são atualizadas pelo agendador do banco, mesmo com o aplicativo fechado. */
     }
 
     /* Fase 2: dados compartilhados, login e atualizações em tempo real */
@@ -1130,6 +1154,9 @@
     let cloudCardNotifications = [];
     let editingCardId = null;
     let cardFields = [];
+    let clientFields = [];
+    let cardDraftTimer = null;
+    let draftCardId = null;
     let selectedHistoryIds = new Set();
     let selectedNotificationIds = new Set();
     let notificationDismissalIds = new Set();
@@ -1147,7 +1174,7 @@
     function saveActivities() {}
     function logActivity() {}
 
-    function mapClient(row) { return {id:row.id,name:row.name,instagram:row.instagram||'',niche:row.niche||'',color:row.color||COLORS[0]}; }
+    function mapClient(row) { return {id:row.id,name:row.name,instagram:row.instagram||'',site:row.site||'',niche:row.niche||'',details:Array.isArray(row.details)?row.details:[],color:row.color||COLORS[0]}; }
     function mapPost(row) { return {id:row.id,title:row.title,clientId:row.client_id,status:row.status,type:row.type||'',date:row.post_date||'',hora:(row.post_time||'').slice(0,5),canva:row.canva||'',legenda:row.legenda||'',notes:row.notes||'',updatedAt:Date.parse(row.updated_at||row.created_at||0)}; }
 
     function cloudReady() { return Boolean(supabaseClient && currentProfile); }
@@ -1245,7 +1272,7 @@
       return `
         <div class="profile-header"><span class="profile-avatar" id="profileAvatarPreview">${profileAvatar(person)}</span><div><h3>${escapeHtml(person.display_name||person.email)}</h3><p>${escapeHtml(person.email)}</p></div></div>
         ${canEditPhoto?`<div class="profile-upload-row"><label class="btn btn-ghost btn-small" for="profilePhotoInput">${person.avatar_url?'Alterar foto':'Adicionar foto'}</label><input id="profilePhotoInput" type="file" accept="image/*" onchange="selectProfilePhoto(this.files[0])"></div>
-        <div class="profile-photo-editor" id="profilePhotoEditor" ${person.avatar_url?'':'hidden'}><label>Zoom <input id="avatarZoom" type="range" min="1" max="2" step="0.05" value="${Number(person.avatar_zoom??1)}" oninput="previewProfilePhoto()"></label><label>Posição horizontal <input id="avatarX" type="range" min="0" max="100" value="${Number(person.avatar_x??50)}" oninput="previewProfilePhoto()"></label><label>Posição vertical <input id="avatarY" type="range" min="0" max="100" value="${Number(person.avatar_y??50)}" oninput="previewProfilePhoto()"></label></div>`:''}
+        <div class="profile-photo-editor hidden" id="profilePhotoEditor"><label>Zoom <input id="avatarZoom" type="range" min="1" max="2" step="0.05" value="${Number(person.avatar_zoom??1)}" oninput="previewProfilePhoto()"></label><label>Posição horizontal <input id="avatarX" type="range" min="0" max="100" value="${Number(person.avatar_x??50)}" oninput="previewProfilePhoto()"></label><label>Posição vertical <input id="avatarY" type="range" min="0" max="100" value="${Number(person.avatar_y??50)}" oninput="previewProfilePhoto()"></label></div>`:''}
         <div class="form-grid">
           <div class="field form-group full"><label for="profileDisplayName">Nome de usuário</label><input class="control" id="profileDisplayName" type="text" value="${escapeHtml(person.display_name||'')}"></div>
           <div class="field form-group full"><label for="profilePhone">WhatsApp</label><input class="control" id="profilePhone" type="tel" inputmode="numeric" maxlength="16" placeholder="(31) 00000-0000" value="${escapeHtml(formatPhone(person.phone||''))}" oninput="maskProfilePhone(this)"></div>
@@ -1297,7 +1324,7 @@
       cloudProfiles=profilesResult.data||[];
       cloudClients=(clientsResult.data||[]).map(mapClient);
       cloudPosts=(postsResult.data||[]).map(mapPost);
-      cloudCards=cardsResult.data||[];
+      cloudCards=(cardsResult.data||[]).filter(card=>!card.is_draft || card.created_by===currentProfile.id);
       cloudCardUpdates=(cardUpdatesResult.data||[]).map(item=>({...item,author:people.get(item.author_id)||null}));
       cloudCardNotifications=cardNotificationsResult.data||[];
       cloudActivities=uniqueActivities((activitiesResult.data||[]).map(item=>({...item,actor:people.get(item.actor_id)})));
@@ -1376,7 +1403,8 @@
 
     async function saveClient() {
       const name=document.getElementById('cName').value.trim(); if(!name) return toast('Informe o nome do cliente.');
-      const payload={name,instagram:document.getElementById('cInstagram').value.trim()||null,niche:document.getElementById('cNiche').value.trim()||null,color:selectedColor,updated_by:currentProfile.id};
+      const details=clientFields.filter(field=>String(field.value||'').trim()||String(field.label||'').trim()).map(field=>({type:field.type,label:(field.label||'').trim()||null,value:(field.value||'').trim()}));
+      const payload={name,instagram:document.getElementById('cInstagram').value.trim()||null,site:document.getElementById('cSite').value.trim()||null,niche:document.getElementById('cNiche').value.trim()||null,details,color:selectedColor,updated_by:currentProfile.id};
       const result=editingClientId ? await supabaseClient.from('clients').update(payload).eq('id',editingClientId) : await supabaseClient.from('clients').insert({...payload,created_by:currentProfile.id});
       if(result.error) return toast('Não foi possível salvar o cliente.');
       closeModal('clientModal'); editingClientId=null; await loadCloudData(); render(); toast('Cliente salvo.');
@@ -1424,17 +1452,17 @@
       const name=item.after_data?.title||item.before_data?.title||item.after_data?.name||item.before_data?.name||'registro';
       const actor=item.actor?.display_name||item.actor?.email||'Uma usuária';
       const verb={insert:'criou',update:'atualizou',delete:'excluiu'}[item.action]||'alterou';
-      return `${actor} ${verb} ${item.entity_type==='client'?'o cliente':'a postagem'} “${name}”`;
+      return `${actor} ${verb} ${item.entity_type==='client'?'o cliente':item.entity_type==='card'?'o card':item.entity_type==='profile'?'o perfil':'a postagem'} “${name}”`;
     }
     function visibleNotificationActivities() {
-      return cloudActivities.filter(item=>item.actor_id!==currentProfile?.id && !notificationDismissalIds.has(item.id));
+      return cloudActivities.filter(item=>!notificationDismissalIds.has(item.id));
     }
     function unreadCardNotifications() {
       return cloudCardNotifications.filter(item=>item.recipient_id===currentProfile?.id&&!item.read_at);
     }
     function renderNotificationCount() {
       const unreadActivities=visibleNotificationActivities().filter(item=>!activityReadAt||new Date(item.created_at)>new Date(activityReadAt));
-      const unread=unreadActivities.length;
+      const unread=unreadActivities.length+unreadCardNotifications().length;
       const count=document.getElementById('notificationCount');
       count.textContent=String(Math.min(unread,99)); count.style.display=unread?'block':'none';
     }
@@ -1506,33 +1534,41 @@
     }
 
     function splitCardDateValue(value='') { const [date='',time='']=String(value).split('|'); return {date,time}; }
-    function toggleCardOptional(kind,forceOpen,button=null) { const section=document.getElementById(kind==='client'?'cardClientSection':'cardResponsibleSection'); const open=forceOpen===undefined?section.classList.contains('hidden'):forceOpen; section.classList.toggle('hidden',!open); const trigger=button||section.previousElementSibling; if(trigger) trigger.setAttribute('aria-expanded',String(open)); }
+    function scheduleCardDraft() { if((editingCardId&&!draftCardId) || !currentProfile) return; clearTimeout(cardDraftTimer); cardDraftTimer=setTimeout(saveCardDraft,700); }
+    async function saveCardDraft() {
+      const fields=cardFields.filter(field=>String(field.value||'').trim()||String(field.label||'').trim()).map(field=>({type:field.type,label:(field.label||'').trim()||null,value:(field.value||'').trim()}));
+      const payload={title:document.getElementById('cardTitle').value.trim()||null,client_id:document.getElementById('cardClient').value||null,responsible_id:document.getElementById('cardResponsible').value||null,stage:document.getElementById('cardStatus').value||null,observations:document.getElementById('cardObservations').value.trim()||null,fields,updated_by:currentProfile.id,is_draft:true};
+      if(!payload.title&&!payload.client_id&&!payload.responsible_id&&!payload.stage&&!payload.observations&&!fields.length) return;
+      const result=draftCardId ? await supabaseClient.from('custom_cards').update(payload).eq('id',draftCardId).select().single() : await supabaseClient.from('custom_cards').insert({...payload,created_by:currentProfile.id}).select().single();
+      if(!result.error&&result.data) { draftCardId=result.data.id; editingCardId=result.data.id; document.getElementById('customCardModalTitle').textContent='Rascunho do card'; }
+    }
+    function touchCardDraft() { scheduleCardDraft(); }
     function renderCustomCardFields() {
       const holder=document.getElementById('customCardFields');
       holder.innerHTML=cardFields.map(field=>{
         const remove=editingCardId?`<button class="field-remove-link" type="button" onclick="removeCustomCardField('${field.id}')">Remover campo</button>`:'';
-        if(field.type==='text') return `<div class="custom-field-card"><label>Título</label><input class="control" type="text" value="${escapeHtml(field.label||'')}" oninput="updateCustomCardField('${field.id}','label',this.value)"><label>Texto</label><div class="card-text-wrap"><textarea class="control" oninput="updateCustomCardField('${field.id}','value',this.value)">${escapeHtml(field.value||'')}</textarea><button class="btn btn-ghost caption-copy" type="button" onclick="copyCardField('${field.id}')">Copiar</button></div>${remove}</div>`;
-        if(field.type==='date') { const value=splitCardDateValue(field.value); return `<div class="custom-field-card"><div class="custom-date-inputs"><input class="control" type="date" value="${escapeHtml(value.date)}" onchange="updateCustomCardDateField('${field.id}','date',this.value)"><input class="control" type="time" value="${escapeHtml(value.time)}" onchange="updateCustomCardDateField('${field.id}','time',this.value)"></div>${remove}</div>`; }
-        return `<div class="custom-field-card"><label>Título</label><input class="control" type="text" value="${escapeHtml(field.label||'')}" oninput="updateCustomCardField('${field.id}','label',this.value)"><label>Link</label><input class="control" type="url" placeholder="https://" value="${escapeHtml(field.value||'')}" oninput="updateCustomCardField('${field.id}','value',this.value)">${remove}</div>`;
+        if(field.type==='text') return `<div class="custom-field-card"><label>Título</label><input class="control" type="text" value="${escapeHtml(field.label||'')}" oninput="updateCustomCardField('${field.id}','label',this.value);touchCardDraft()"><label>Texto</label><div class="card-text-wrap"><textarea class="control" oninput="updateCustomCardField('${field.id}','value',this.value);touchCardDraft()">${escapeHtml(field.value||'')}</textarea><button class="btn btn-ghost caption-copy" type="button" onclick="copyCardField('${field.id}')">Copiar</button></div>${remove}</div>`;
+        if(field.type==='date') { const value=splitCardDateValue(field.value); return `<div class="custom-field-card"><div class="custom-date-inputs"><input class="control" type="date" value="${escapeHtml(value.date)}" onchange="updateCustomCardDateField('${field.id}','date',this.value);touchCardDraft()"><input class="control" type="time" value="${escapeHtml(value.time)}" onchange="updateCustomCardDateField('${field.id}','time',this.value);touchCardDraft()"></div>${remove}</div>`; }
+        return `<div class="custom-field-card"><input class="control" type="url" aria-label="Link" placeholder="https://" value="${escapeHtml(field.value||'')}" oninput="updateCustomCardField('${field.id}','value',this.value);touchCardDraft()">${remove}</div>`;
       }).join('');
     }
-    function addCustomCardField(type) { cardFields.push({id:`${Date.now()}-${Math.random()}`,type,label:'',value:''}); renderCustomCardFields(); }
+    function addCustomCardField(type) { cardFields.push({id:`${Date.now()}-${Math.random()}`,type,label:'',value:''}); renderCustomCardFields(); touchCardDraft(); }
     function updateCustomCardField(id,key,value) { const field=cardFields.find(item=>item.id===id); if(field) field[key]=value; }
     function updateCustomCardDateField(id,part,value) { const field=cardFields.find(item=>item.id===id); if(!field) return; const parsed=splitCardDateValue(field.value); parsed[part]=value; field.value=parsed.date+(parsed.time?'|'+parsed.time:''); }
     function copyCardField(id) { const field=cardFields.find(item=>item.id===id); if(!field?.value) return toast('Não há texto para copiar.'); navigator.clipboard?.writeText(field.value).then(()=>toast('Texto copiado.')).catch(()=>toast('Não foi possível copiar o texto.')); }
     function removeCustomCardField(id) { if(!editingCardId) return; if(!confirm('Remover este campo ao salvar a edição?')) return; cardFields=cardFields.filter(item=>item.id!==id); renderCustomCardFields(); }
-    function stageLabel(stage) { return ({criar:'Criar',conferir:'Conferir',refinar:'Refinar',programado:'Programado',publicado:'Publicado'})[stage]||'Sem status'; }
+    function stageLabel(stage) { return ({rascunho:'Rascunho',criar:'Criar',conferir:'Conferir',refinar:'Refinar',pronto:'Pronto',programar:'Programar',programado:'Programado',publicado:'Publicado'})[stage]||'Sem status'; }
     function getCardClient(card) { return getClients().find(client=>client.id===card.client_id)||null; }
     function cardOwner(card) { return cloudProfiles.find(person=>person.id===card.created_by)||null; }
     function canEditCardOrientation(card) { return currentProfile?.role==='admin' || card.created_by===currentProfile?.id; }
     function fillCardSelects(card=null,preselectedClientId='') {
       const clientSelect=document.getElementById('cardClient'), responsibleSelect=document.getElementById('cardResponsible');
-      clientSelect.innerHTML='<option value="">Sem vínculo com cliente</option>'+getClients().map(client=>`<option value="${client.id}">${escapeHtml(client.name)}</option>`).join('');
-      responsibleSelect.innerHTML='<option value="">Sem responsável</option>'+cloudProfiles.filter(person=>person.active).map(person=>`<option value="${person.id}">${escapeHtml(person.display_name||person.email)}</option>`).join('');
+      clientSelect.innerHTML='<option value="">Cliente</option>'+getClients().map(client=>`<option value="${client.id}">${escapeHtml(client.name)}</option>`).join('');
+      responsibleSelect.innerHTML='<option value="">Responsável</option>'+cloudProfiles.filter(person=>person.active).map(person=>`<option value="${person.id}">${escapeHtml(person.display_name||person.email)}</option>`).join('');
       clientSelect.value=card?.client_id||preselectedClientId||''; responsibleSelect.value=card?.responsible_id||'';
     }
     function openCustomCardModal(preselectedClientId='',cardId=null) {
-      editingCardId=cardId; const card=cardId?cloudCards.find(item=>item.id===cardId):null;
+      editingCardId=cardId; draftCardId=null; const card=cardId?cloudCards.find(item=>item.id===cardId):null; if(card?.is_draft) draftCardId=card.id;
       if(cardId&&!card) return;
       if(card&&!canEditCardOrientation(card)) return toast('A observação só pode ser alterada por quem criou o card ou pela administradora.');
       document.getElementById('customCardModalTitle').textContent=card?'Editar card':'Novo card';
@@ -1540,30 +1576,29 @@
       document.getElementById('cardTitle').value=card?.title||'';
       document.getElementById('cardStatus').value=card?.stage||'';
       document.getElementById('cardObservations').value=card?.observations||'';
-      toggleCardOptional('client',Boolean(card?.client_id||preselectedClientId));
-      toggleCardOptional('responsible',Boolean(card?.responsible_id));
       cardFields=(card?.fields||[]).map(field=>({id:`${Date.now()}-${Math.random()}`,type:field.type,label:field.label||'',value:field.value||''}));
       renderCustomCardFields(); document.getElementById('customCardModal').classList.add('open');
+      if(!card) ['cardTitle','cardClient','cardResponsible','cardStatus','cardObservations'].forEach(id=>{ const field=document.getElementById(id); field.oninput=touchCardDraft; field.onchange=touchCardDraft; });
     }
     async function notifyCardRecipient(cardId,recipientId,notificationType) { if(!recipientId||recipientId===currentProfile.id) return; await supabaseClient.from('card_notifications').insert({card_id:cardId,recipient_id:recipientId,notification_type:notificationType,created_by:currentProfile.id}); }
     async function saveCustomCard() {
       const fields=cardFields.filter(field=>String(field.value||'').trim()||String(field.label||'').trim()).map(field=>({type:field.type,label:(field.label||'').trim()||null,value:(field.value||'').trim()}));
-      const payload={title:document.getElementById('cardTitle').value.trim()||null,client_id:document.getElementById('cardClient').value||null,responsible_id:document.getElementById('cardResponsible').value||null,stage:document.getElementById('cardStatus').value||null,observations:document.getElementById('cardObservations').value.trim()||null,fields,updated_by:currentProfile.id};
+      const payload={title:document.getElementById('cardTitle').value.trim()||null,client_id:document.getElementById('cardClient').value||null,responsible_id:document.getElementById('cardResponsible').value||null,stage:document.getElementById('cardStatus').value||null,observations:document.getElementById('cardObservations').value.trim()||null,fields,updated_by:currentProfile.id,is_draft:false};
       let cardId=editingCardId, previousResponsible='';
       if(editingCardId) { const existing=cloudCards.find(card=>card.id===editingCardId); previousResponsible=existing?.responsible_id||''; const {error}=await supabaseClient.from('custom_cards').update(payload).eq('id',editingCardId); if(error) return toast('Não foi possível salvar o card.'); }
       else { const {data,error}=await supabaseClient.from('custom_cards').insert({...payload,created_by:currentProfile.id}).select().single(); if(error) return toast('Não foi possível salvar o card.'); cardId=data.id; }
       if(payload.responsible_id&&payload.responsible_id!==previousResponsible) await notifyCardRecipient(cardId,payload.responsible_id,'demanda');
-      closeModal('customCardModal'); editingCardId=null; await loadCloudData(); render(); toast('Card salvo.');
+      document.getElementById('customCardModal').classList.remove('open'); editingCardId=null; draftCardId=null; await loadCloudData(); render(); toast('Card salvo.');
     }
     function renderCardSummary(card) {
       const client=getCardClient(card), responsible=cloudProfiles.find(person=>person.id===card.responsible_id), color=client?.color||'var(--cyan)';
-      return `<button class="custom-card" type="button" style="border-left-color:${escapeHtml(color)}" onclick="openCardDetail('${card.id}')"><h4>${escapeHtml(card.title||'Sem título')}</h4><div class="card-client-name" style="color:${escapeHtml(color)}">${escapeHtml(client?.name||'Sem cliente vinculado')}</div><time>Registrado em ${new Date(card.created_at).toLocaleString('pt-BR')}</time><div class="card-meta">${card.stage?`<span class="badge">${stageLabel(card.stage)}</span>`:''}${responsible?`<span class="badge">${escapeHtml(responsible.display_name||responsible.email)}</span>`:''}</div></button>`;
+      return `<button class="custom-card" type="button" style="border-left-color:${escapeHtml(color)}" onclick="openCardDetail('${card.id}')"><h4>${escapeHtml(card.title||'Sem título')}</h4><div class="card-client-name" style="color:${escapeHtml(color)}">${escapeHtml(client?.name||'Sem cliente vinculado')}</div><time>Registrado em ${new Date(card.created_at).toLocaleString('pt-BR')}</time><div class="card-meta">${card.is_draft?'<span class="badge">Rascunho</span>':''}${card.stage?`<span class="badge">${stageLabel(card.stage)}</span>`:''}${responsible?`<span class="badge">${escapeHtml(responsible.display_name||responsible.email)}</span>`:''}</div></button>`;
     }
     function renderCustomCards() {
       const section=document.getElementById('customCardsSection'), inClient=state.view==='Todos'&&Boolean(state.clientId), cardStage=String(state.view||'').toLowerCase(), isWorkflowStage=STATUSES.map(status=>status.toLowerCase()).includes(cardStage);
       if(!isWorkflowStage&&!inClient) { section.classList.add('hidden'); return; }
       section.classList.remove('hidden'); document.getElementById('customCardsHeading').textContent=inClient?'Cards do cliente':`Cards — ${stageLabel(cardStage)}`;
-      const grid=document.getElementById('customCardsGrid'), cards=inClient?cloudCards.filter(card=>card.client_id===state.clientId):cloudCards.filter(card=>card.stage===cardStage);
+      const grid=document.getElementById('customCardsGrid'), cards=inClient?cloudCards.filter(card=>card.client_id===state.clientId):cloudCards.filter(card=>card.stage===cardStage||(cardStage==='criar'&&card.is_draft&&card.created_by===currentProfile?.id));
       grid.innerHTML=cards.length?cards.map(renderCardSummary).join(''):`<div class="empty-state"><strong>Nenhum card em ${stageLabel(cardStage)}</strong><span>Use “Novo card” para registrar um item.</span></div>`;
     }
     function cardFieldsHtml(card) { return (card.fields||[]).map(field=>{ if(field.type==='link') { const url=safeUrl(field.value); return url?`<p><a href="${url}" target="_blank" rel="noopener">Abrir link</a></p>`:''; } if(field.type==='date') { const value=splitCardDateValue(field.value); return value.date?`<p>${formatDate(value.date)}${value.time?` · ${escapeHtml(value.time)}`:''}</p>`:''; } return `<p>${escapeHtml(field.value)}</p>`; }).join(''); }
@@ -1637,9 +1672,9 @@
     }
     function render() { updateAutomaticStatuses(); renderNav(); populateFilterOptions(); renderFilterControls(); renderMainContent(); renderCustomCards(); renderAccessManagement(); renderHeaderUser(); renderNotificationCount(); updateLiveClock(); }
 
-    document.querySelectorAll('.modal-overlay').forEach(overlay=>overlay.addEventListener('click',event=>{ if(event.target===overlay) closeModal(overlay.id); }));
+    document.querySelectorAll('.modal-overlay').forEach(overlay=>overlay.addEventListener('click',event=>{ if(event.target===overlay && overlay.id!=='customCardModal') closeModal(overlay.id); }));
     document.addEventListener('click',event=>{ const menu=document.getElementById('accountMenu'), button=document.getElementById('accountButton'); if(menu?.classList.contains('open') && !menu.contains(event.target) && event.target!==button) closeAccountMenu(); });
-    document.addEventListener('keydown',event=>{ if(event.key==='Escape') { document.querySelectorAll('.modal-overlay.open').forEach(modal=>closeModal(modal.id)); closeAccountMenu(); } });
+    document.addEventListener('keydown',event=>{ if(event.key==='Escape') { document.querySelectorAll('.modal-overlay.open').forEach(modal=>{if(modal.id!=='customCardModal')closeModal(modal.id);}); closeAccountMenu(); } });
     initializeApp(); setInterval(updateAutomaticStatuses,60000); setInterval(updateLiveClock,1000);
   </script>
 </body>
