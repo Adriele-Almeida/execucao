@@ -162,7 +162,7 @@
     .password-toggle { position:absolute; right:7px; top:50%; transform:translateY(-50%); border:0; background:transparent; color:var(--cyan); font-size:11px; font-weight:700; }
     .auth-link { display:block; width:100%; margin-top:12px; border:0; background:transparent; color:var(--cyan); font-size:12px; text-decoration:underline; }
     .auth-error { min-height:20px; margin-top:12px; color:var(--red); font-size:13px; }
-    .account-button { width:42px; height:42px; border:1px solid var(--border); border-radius:8px; padding:0; background:transparent; color:var(--text); font-size:22px; line-height:1; }
+    .header-user{display:flex;align-items:center;gap:8px;max-width:210px;padding:4px 8px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text);text-align:left}.header-user .profile-avatar{width:32px;height:32px}.header-user strong{display:block;max-width:145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}.account-button { width:42px; height:42px; border:1px solid var(--border); border-radius:8px; padding:0; background:transparent; color:var(--text); font-size:22px; line-height:1; }
     .account-button:hover { border-color:var(--cyan); color:var(--cyan); }
     .account-menu { display:none; position:fixed; z-index:250; top:65px; right:24px; width:min(310px,calc(100vw - 28px)); padding:9px; border:1px solid var(--border); border-radius:10px; background:var(--surface); box-shadow:0 18px 42px rgba(0,0,0,.42); }
     .account-menu.open { display:block; }
@@ -171,6 +171,7 @@
     .account-menu-item:hover { background:var(--surface-2); }
     .profile-avatar { width:36px; height:36px; flex:none; overflow:hidden; display:grid; place-items:center; border:1px solid var(--border); border-radius:50%; background:var(--surface-2); color:var(--cyan); font-weight:700; }
     .profile-avatar img { width:100%; height:100%; object-fit:cover; }
+    .profile-photo-editor{display:grid;gap:9px;margin:0 0 16px;padding:12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2)}.profile-photo-editor label{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--muted);font-size:13px}.profile-photo-editor input{width:150px}.profile-contact-icon{width:42px;height:42px;padding:9px}.profile-contact-icon svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8}.profile-contact-icon.active{border-color:var(--cyan);color:var(--cyan)}
     .account-menu-item small { display:block; margin-top:2px; color:var(--muted); font-size:12px; }
     .profile-divider { height:1px; margin:7px 0; background:var(--border); }
     .profile-header { display:flex; align-items:center; gap:13px; margin-bottom:18px; }
@@ -193,7 +194,7 @@
       header { min-height:66px; padding:11px 14px; }
       .brand h1 { font-size:11px; letter-spacing:1.5px; }
       .brand p { font-size:10px; }
-      .header-actions .btn { min-height:34px; padding:7px 9px; font-size:10px; }
+      .header-actions .btn { min-height:34px; padding:7px 9px; font-size:10px; }.header-user{max-width:108px;padding:3px 5px}.header-user strong{max-width:62px;font-size:11px}
       .account-button { display:inline-flex; }
       .app-shell { display:block; min-height:calc(100vh - 66px); }
       .sidebar { position:sticky; top:66px; z-index:90; width:100%; height:auto; padding:8px; overflow-x:auto; border-right:0; border-bottom:1px solid var(--border); white-space:nowrap; }
@@ -421,6 +422,7 @@
       <p>Dashboard Estratégico</p>
     </button>
     <div class="header-clock" id="headerClock" aria-label="Data e horário atual"></div>
+    <button class="header-user hidden" id="headerUser" type="button" onclick="openOwnProfile()" aria-label="Abrir meu perfil"></button>
     <div class="header-actions">
       <button class="btn btn-primary" type="button" onclick="openPostModal()">Nova postagem</button>
       <button class="btn btn-ghost" type="button" onclick="openClientModal()">Novo cliente</button>
@@ -575,8 +577,8 @@
             <div class="card-management-list" id="cardManagementList"></div><button class="btn btn-danger" id="deleteSelectedCardsButton" type="button" onclick="deleteSelectedCards()" disabled>Excluir cards selecionados</button>
           </article>
           <article class="settings-card hidden" id="accessManagementCard">
-            <h3>Controle de acessos</h3>
-            <p>Ative ou pause o acesso de cada pessoa cadastrada. Apenas a administradora vê esta área.</p>
+            <h3>Usuários</h3>
+            <p>Edite os dados, a foto e o acesso de cada pessoa cadastrada.</p>
             <div id="accessManagementList"></div>
           </article>
         </div>
@@ -1200,9 +1202,12 @@
     function initials(person) {
       return String(person?.display_name || person?.email || '?').trim().split(/\s+/).map(part=>part[0]).join('').slice(0,2).toUpperCase() || '?';
     }
+    function avatarStyle(person) { const x=Number(person?.avatar_x??50),y=Number(person?.avatar_y??50),zoom=Number(person?.avatar_zoom??1); return `object-position:${x}% ${y}%;transform:scale(${zoom});`; }
     function profileAvatar(person) {
-      return person?.avatar_url ? `<img src="${escapeHtml(person.avatar_url)}" alt="">` : escapeHtml(initials(person));
+      return person?.avatar_url ? `<img src="${escapeHtml(person.avatar_url)}" alt="" style="${avatarStyle(person)}">` : escapeHtml(initials(person));
     }
+    function renderHeaderUser() { const header=document.getElementById('headerUser'); if(!header||!currentProfile) return; header.innerHTML=`<span class="profile-avatar">${profileAvatar(currentProfile)}</span><strong>${escapeHtml(currentProfile.display_name||currentProfile.email)}</strong>`; header.classList.remove('hidden'); }
+    function contactIcon(type) { const paths={email:'<path d="M3 5h18v14H3z"/><path d="m3 7 9 6 9-6"/>',whatsapp:'<path d="M20 11.5a8 8 0 0 1-11.8 7L4 20l1.6-4.1A8 8 0 1 1 20 11.5Z"/><path d="M9 8.5c.5 3 2.4 4.9 5.4 5.4l1.2-1.2-1.6-1.2-.9.4c-1.1-.5-1.8-1.2-2.3-2.3l.4-.9-1.2-1.6Z"/>',instagram:'<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.5 6.5h.01"/>'}; return `<svg viewBox="0 0 24 24" aria-hidden="true">${paths[type]}</svg>`; }
     function toggleAccountMenu() {
       const menu=document.getElementById('accountMenu');
       menu.classList.toggle('open');
@@ -1234,76 +1239,39 @@
       const whats=document.getElementById('profileWhatsAppButton');
       if(whats) whats.disabled=!isValidPhone(phone);
     }
-    function openOwnProfile() {
-      closeAccountMenu();
-      const person=currentProfile;
-      document.getElementById('profileModalTitle').textContent='Meu perfil';
-      document.getElementById('profileModalContent').innerHTML=`
+    let profileEditingId=null,pendingProfilePhoto=null,profilePhotoDraftUrl='';
+    function profileForm(person,{admin=false}={}) {
+      const title=admin?'Editar usuário':'Meu perfil', canEditPhoto=admin||person.id===currentProfile.id;
+      return `
         <div class="profile-header"><span class="profile-avatar" id="profileAvatarPreview">${profileAvatar(person)}</span><div><h3>${escapeHtml(person.display_name||person.email)}</h3><p>${escapeHtml(person.email)}</p></div></div>
-        <div class="profile-upload-row"><label class="btn btn-ghost btn-small" for="profilePhotoInput">${person.avatar_url?'Alterar foto':'Adicionar foto'}</label><input id="profilePhotoInput" type="file" accept="image/*" onchange="uploadProfilePhoto(this.files[0])"></div>
+        ${canEditPhoto?`<div class="profile-upload-row"><label class="btn btn-ghost btn-small" for="profilePhotoInput">${person.avatar_url?'Alterar foto':'Adicionar foto'}</label><input id="profilePhotoInput" type="file" accept="image/*" onchange="selectProfilePhoto(this.files[0])"></div>
+        <div class="profile-photo-editor" id="profilePhotoEditor" ${person.avatar_url?'':'hidden'}><label>Zoom <input id="avatarZoom" type="range" min="1" max="2" step="0.05" value="${Number(person.avatar_zoom??1)}" oninput="previewProfilePhoto()"></label><label>Posição horizontal <input id="avatarX" type="range" min="0" max="100" value="${Number(person.avatar_x??50)}" oninput="previewProfilePhoto()"></label><label>Posição vertical <input id="avatarY" type="range" min="0" max="100" value="${Number(person.avatar_y??50)}" oninput="previewProfilePhoto()"></label></div>`:''}
         <div class="form-grid">
           <div class="field form-group full"><label for="profileDisplayName">Nome de usuário</label><input class="control" id="profileDisplayName" type="text" value="${escapeHtml(person.display_name||'')}"></div>
           <div class="field form-group full"><label for="profilePhone">WhatsApp</label><input class="control" id="profilePhone" type="tel" inputmode="numeric" maxlength="16" placeholder="(31) 00000-0000" value="${escapeHtml(formatPhone(person.phone||''))}" oninput="maskProfilePhone(this)"></div>
           <div class="field form-group full"><label for="profileInstagram">Instagram</label><input class="control" id="profileInstagram" type="text" placeholder="@usuario" value="${escapeHtml(person.instagram||'')}"></div>
-          <div class="field form-group"><label for="profilePassword">Nova senha</label><div class="password-wrap"><input class="control" id="profilePassword" type="password" autocomplete="new-password"><button class="password-toggle" type="button" onclick="togglePasswordVisibility('profilePassword',this)">Mostrar</button></div></div>
-          <div class="field form-group"><label for="profilePasswordConfirm">Confirmar nova senha</label><div class="password-wrap"><input class="control" id="profilePasswordConfirm" type="password" autocomplete="new-password"><button class="password-toggle" type="button" onclick="togglePasswordVisibility('profilePasswordConfirm',this)">Mostrar</button></div></div>
         </div>
-        <div class="modal-actions"><button class="btn btn-ghost" type="button" onclick="closeModal('profileModal')">Cancelar</button><button class="btn btn-primary" type="button" onclick="saveOwnProfile()">Salvar perfil</button></div>`;
-      document.getElementById('profileModal').classList.add('open');
+        ${admin?'':`<div class="settings-actions" style="margin-top:14px"><button class="btn btn-ghost" type="button" onclick="togglePasswordReset()">Redefinir senha</button></div><div class="form-grid hidden" id="passwordResetFields" style="margin-top:14px"><div class="field form-group full"><label for="profileCurrentPassword">Senha atual</label><div class="password-wrap"><input class="control" id="profileCurrentPassword" type="password" autocomplete="current-password"><button class="password-toggle" type="button" onclick="togglePasswordVisibility('profileCurrentPassword',this)">Mostrar</button></div></div><div class="field form-group"><label for="profilePassword">Nova senha</label><div class="password-wrap"><input class="control" id="profilePassword" type="password" autocomplete="new-password"><button class="password-toggle" type="button" onclick="togglePasswordVisibility('profilePassword',this)">Mostrar</button></div></div><div class="field form-group"><label for="profilePasswordConfirm">Confirmar nova senha</label><div class="password-wrap"><input class="control" id="profilePasswordConfirm" type="password" autocomplete="new-password"><button class="password-toggle" type="button" onclick="togglePasswordVisibility('profilePasswordConfirm',this)">Mostrar</button></div></div></div>`}
+        <div class="modal-actions"><button class="btn btn-ghost" type="button" onclick="closeModal('profileModal')">Cancelar</button><button class="btn btn-primary" type="button" onclick="${admin?'saveAdminUserProfile()':'saveOwnProfile()'}">Salvar</button></div>`;
     }
+    function openOwnProfile() { closeAccountMenu(); profileEditingId=currentProfile.id; pendingProfilePhoto=null; profilePhotoDraftUrl=''; document.getElementById('profileModalTitle').textContent='Meu perfil'; document.getElementById('profileModalContent').innerHTML=profileForm(currentProfile); document.getElementById('profileModal').classList.add('open'); }
+    function openAdminUserProfile(id) { if(currentProfile?.role!=='admin') return; const person=cloudProfiles.find(item=>item.id===id); if(!person) return; closeAccountMenu(); profileEditingId=id; pendingProfilePhoto=null; profilePhotoDraftUrl=''; document.getElementById('profileModalTitle').textContent='Usuário'; document.getElementById('profileModalContent').innerHTML=profileForm(person,{admin:true}); document.getElementById('profileModal').classList.add('open'); }
     function openProfile(id) {
-      closeAccountMenu();
-      const person=cloudProfiles.find(item=>item.id===id); if(!person) return;
-      const phone=String(person.phone||'').replace(/\D/g,'');
-      const instagram=String(person.instagram||'').replace(/^@/,'');
+      closeAccountMenu(); const person=cloudProfiles.find(item=>item.id===id); if(!person) return;
+      const phone=String(person.phone||'').replace(/\D/g,''), instagram=String(person.instagram||'').replace(/^@/,'');
       document.getElementById('profileModalTitle').textContent=person.display_name||person.email;
-      document.getElementById('profileModalContent').innerHTML=`
-        <div class="profile-header"><span class="profile-avatar">${profileAvatar(person)}</span><div><h3>${escapeHtml(person.display_name||person.email)}</h3><p>${escapeHtml(person.email)}</p></div></div>
-        <div class="profile-contact-actions">
-          <button class="btn btn-ghost" type="button" onclick="copyProfileEmail('${escapeHtml(person.email)}')">E-mail</button>
-          <button class="btn btn-ghost" type="button" ${isValidPhone(phone)?`onclick="window.open('https://wa.me/55${phone}','_blank','noopener')"`:'disabled'}>WhatsApp</button>
-          <button class="btn btn-ghost" type="button" ${instagram?`onclick="window.open('https://instagram.com/${encodeURIComponent(instagram)}','_blank','noopener')"`:'disabled'}>Instagram</button>
-        </div>
-        <div class="modal-actions"><button class="btn btn-ghost" type="button" onclick="closeModal('profileModal')">Fechar</button></div>`;
+      document.getElementById('profileModalContent').innerHTML=`<div class="profile-header"><span class="profile-avatar">${profileAvatar(person)}</span><div><h3>${escapeHtml(person.display_name||person.email)}</h3><p>${escapeHtml(person.email)}</p></div></div><div class="profile-contact-actions"><button class="btn btn-ghost profile-contact-icon active" type="button" title="Copiar e-mail" aria-label="Copiar e-mail" onclick="copyProfileEmail('${escapeHtml(person.email)}')">${contactIcon('email')}</button><button class="btn btn-ghost profile-contact-icon ${isValidPhone(phone)?'active':''}" type="button" title="Abrir WhatsApp" aria-label="Abrir WhatsApp" ${isValidPhone(phone)?`onclick="window.open('https://wa.me/55${phone}','_blank','noopener')"`:'disabled'}>${contactIcon('whatsapp')}</button><button class="btn btn-ghost profile-contact-icon ${instagram?'active':''}" type="button" title="Abrir Instagram" aria-label="Abrir Instagram" ${instagram?`onclick="window.open('https://instagram.com/${encodeURIComponent(instagram)}','_blank','noopener')"`:'disabled'}>${contactIcon('instagram')}</button></div><div class="modal-actions"><button class="btn btn-ghost" type="button" onclick="closeModal('profileModal')">Fechar</button></div>`;
       document.getElementById('profileModal').classList.add('open');
     }
-    function copyProfileEmail(email) {
-      navigator.clipboard?.writeText(email).then(()=>toast('E-mail copiado.')).catch(()=>toast('Não foi possível copiar o e-mail.'));
-    }
-    async function uploadProfilePhoto(file) {
-      if(!file) return;
-      if(!file.type.startsWith('image/')) return toast('Escolha uma imagem.');
-      if(file.size>5*1024*1024) return toast('A foto deve ter até 5 MB.');
-      const extension=(file.name.split('.').pop()||'jpg').toLowerCase();
-      const path=`${currentProfile.id}/avatar.${extension}`;
-      const {error}=await supabaseClient.storage.from('profile-avatars').upload(path,file,{upsert:true,contentType:file.type});
-      if(error) return toast('Não foi possível enviar a foto.');
-      const {data}=supabaseClient.storage.from('profile-avatars').getPublicUrl(path);
-      const {error:profileError}=await supabaseClient.from('profiles').update({avatar_url:data.publicUrl}).eq('id',currentProfile.id);
-      if(profileError) return toast('A foto foi enviada, mas não foi possível salvar no perfil.');
-      currentProfile={...currentProfile,avatar_url:data.publicUrl};
-      document.getElementById('profileAvatarPreview').innerHTML=profileAvatar(currentProfile);
-      await loadCloudData(); render(); toast('Foto atualizada.');
-    }
-    async function saveOwnProfile() {
-      const display_name=document.getElementById('profileDisplayName').value.trim();
-      const phone=document.getElementById('profilePhone').value.replace(/\D/g,'');
-      const instagram=document.getElementById('profileInstagram').value.trim().replace(/^@/,'');
-      const password=document.getElementById('profilePassword').value;
-      const confirmation=document.getElementById('profilePasswordConfirm').value;
-      if(!display_name) return toast('Informe o nome de usuário.');
-      if(phone && !isValidPhone(phone)) return toast('Informe o WhatsApp com DDD.');
-      if(password && password.length<6) return toast('A senha precisa ter ao menos 6 caracteres.');
-      if(password && password!==confirmation) return toast('As senhas não conferem.');
-      const {error}=await supabaseClient.from('profiles').update({display_name,phone:phone||null,instagram:instagram||null}).eq('id',currentProfile.id);
-      if(error) return toast('Não foi possível salvar o perfil.');
-      if(password) {
-        const {error:passwordError}=await supabaseClient.auth.updateUser({password});
-        if(passwordError) return toast('Perfil salvo, mas não foi possível alterar a senha.');
-      }
-      currentProfile={...currentProfile,display_name,phone:phone||null,instagram:instagram||null};
-      closeModal('profileModal'); await loadCloudData(); render(); toast('Perfil atualizado.');
-    }
+    function copyProfileEmail(email) { navigator.clipboard?.writeText(email).then(()=>toast('E-mail copiado.')).catch(()=>toast('Não foi possível copiar o e-mail.')); }
+    function togglePasswordReset(){document.getElementById('passwordResetFields')?.classList.toggle('hidden');}
+    function selectProfilePhoto(file) { if(!file) return; if(!file.type.startsWith('image/')) return toast('Escolha uma imagem.'); if(file.size>5*1024*1024) return toast('A foto deve ter até 5 MB.'); pendingProfilePhoto=file; profilePhotoDraftUrl=URL.createObjectURL(file); document.getElementById('profilePhotoEditor')?.classList.remove('hidden'); previewProfilePhoto(); }
+    function previewProfilePhoto() { const preview=document.getElementById('profileAvatarPreview'), zoom=document.getElementById('avatarZoom')?.value||1,x=document.getElementById('avatarX')?.value||50,y=document.getElementById('avatarY')?.value||50; if(!preview) return; const source=profilePhotoDraftUrl||(cloudProfiles.find(item=>item.id===profileEditingId)?.avatar_url)||currentProfile?.avatar_url; if(source) preview.innerHTML=`<img src="${escapeHtml(source)}" alt="" style="object-position:${x}% ${y}%;transform:scale(${zoom})">`; }
+    async function uploadProfilePhoto(file,userId) { if(!file) return null; const extension=(file.name.split('.').pop()||'jpg').toLowerCase(),path=`${userId}/avatar.${extension}`; const {error}=await supabaseClient.storage.from('profile-avatars').upload(path,file,{upsert:true,contentType:file.type}); if(error) throw error; return supabaseClient.storage.from('profile-avatars').getPublicUrl(path).data.publicUrl; }
+    function profileValues(){return {display_name:document.getElementById('profileDisplayName').value.trim()||null,phone:(document.getElementById('profilePhone').value||'').replace(/\D/g,'')||null,instagram:(document.getElementById('profileInstagram').value||'').trim().replace(/^@/,'')||null,avatar_x:Number(document.getElementById('avatarX')?.value||50),avatar_y:Number(document.getElementById('avatarY')?.value||50),avatar_zoom:Number(document.getElementById('avatarZoom')?.value||1)};}
+    async function saveOwnProfile() { const values=profileValues(); if(values.phone&&!isValidPhone(values.phone)) return toast('Informe o WhatsApp com DDD.'); const password=document.getElementById('profilePassword')?.value||'',confirmation=document.getElementById('profilePasswordConfirm')?.value||'',currentPassword=document.getElementById('profileCurrentPassword')?.value||''; if(password){if(!currentPassword)return toast('Informe a senha atual.');if(password.length<6)return toast('A senha precisa ter ao menos 6 caracteres.');if(password!==confirmation)return toast('As senhas não conferem.');const check=await supabaseClient.auth.signInWithPassword({email:currentProfile.email,password:currentPassword});if(check.error)return toast('Senha atual incorreta.');}
+      try { const url=await uploadProfilePhoto(pendingProfilePhoto,currentProfile.id); if(url)values.avatar_url=url; const {error}=await supabaseClient.from('profiles').update(values).eq('id',currentProfile.id);if(error)throw error;if(password){const {error}=await supabaseClient.auth.updateUser({password});if(error)throw error;}currentProfile={...currentProfile,...values};closeModal('profileModal');await loadCloudData();render();toast('Perfil atualizado.');}catch(error){toast('Não foi possível salvar o perfil.');}}
+    async function saveAdminUserProfile() { if(currentProfile?.role!=='admin'||!profileEditingId)return; const values=profileValues();if(values.phone&&!isValidPhone(values.phone))return toast('Informe o WhatsApp com DDD.');try{const url=await uploadProfilePhoto(pendingProfilePhoto,profileEditingId);if(url)values.avatar_url=url;const {error}=await supabaseClient.from('profiles').update(values).eq('id',profileEditingId);if(error)throw error;closeModal('profileModal');await loadCloudData();render();toast('Usuário atualizado.');}catch(error){toast('Não foi possível salvar o usuário.');}}
     async function signOut() {
       if(!supabaseClient) return;
       await supabaseClient.auth.signOut();
@@ -1320,7 +1288,7 @@
         supabaseClient.from('card_updates').select('*').order('created_at',{ascending:true}),
         supabaseClient.from('card_notifications').select('*').order('created_at',{ascending:false}),
         supabaseClient.from('activity_log').select('*').order('created_at',{ascending:false}).limit(100),
-        supabaseClient.from('profiles').select('id,display_name,email,phone,instagram,avatar_url,role,active'),
+        supabaseClient.from('profiles').select('id,display_name,email,phone,instagram,avatar_url,avatar_x,avatar_y,avatar_zoom,role,active'),
         supabaseClient.from('activity_reads').select('last_read_at').eq('user_id',currentProfile.id).maybeSingle(),
         supabaseClient.from('notification_dismissals').select('activity_id').eq('user_id',currentProfile.id)
       ]);
@@ -1512,7 +1480,7 @@
       if(state.view!=='Configurações' || currentProfile?.role!=='admin') { card.classList.add('hidden'); return; }
       card.classList.remove('hidden');
       const list=document.getElementById('accessManagementList');
-      list.innerHTML=cloudProfiles.map(person=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--border)"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis"><strong style="display:block;color:var(--text)">${escapeHtml(person.display_name||person.email)}</strong><small style="color:var(--muted)">${escapeHtml(person.email)}${person.role==='admin'?' · Administradora':''}</small></span>${person.id===currentProfile.id?'<span class="badge status-publicado">Seu acesso</span>':`<button class="btn ${person.active?'btn-ghost':'btn-primary'} btn-small" type="button" onclick="setAccessActive('${person.id}',${!person.active})">${person.active?'Pausar':'Ativar'}</button>`}</div>`).join('')||'<div class="empty-state">Nenhum acesso cadastrado.</div>';
+      list.innerHTML=cloudProfiles.map(person=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--border)"><button class="account-menu-item" type="button" onclick="openAdminUserProfile('${person.id}')"><span class="profile-avatar">${profileAvatar(person)}</span><span><strong>${escapeHtml(person.display_name||person.email)}</strong><small>${escapeHtml(person.email)}${person.role==='admin'?' · Administradora':''}</small></span></button><span class="settings-actions">${person.id===currentProfile.id?'<span class="badge status-publicado">Seu acesso</span>':`<button class="btn ${person.active?'btn-ghost':'btn-primary'} btn-small" type="button" onclick="setAccessActive('${person.id}',${!person.active})">${person.active?'Pausar':'Ativar'}</button>`}<button class="btn btn-ghost btn-small" type="button" onclick="openAdminUserProfile('${person.id}')">Editar</button></span></div>`).join('')||'<div class="empty-state">Nenhum acesso cadastrado.</div>';
     }
 
     async function setAccessActive(userId,active) {
@@ -1667,7 +1635,7 @@
       const now=new Date(), day=String(now.getDate()).padStart(2,'0'), month=MONTHS[now.getMonth()], time=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
       clock.textContent=`${day} ${month} ${now.getFullYear()} | ${time}`;
     }
-    function render() { updateAutomaticStatuses(); renderNav(); populateFilterOptions(); renderFilterControls(); renderMainContent(); renderCustomCards(); renderAccessManagement(); renderNotificationCount(); updateLiveClock(); }
+    function render() { updateAutomaticStatuses(); renderNav(); populateFilterOptions(); renderFilterControls(); renderMainContent(); renderCustomCards(); renderAccessManagement(); renderHeaderUser(); renderNotificationCount(); updateLiveClock(); }
 
     document.querySelectorAll('.modal-overlay').forEach(overlay=>overlay.addEventListener('click',event=>{ if(event.target===overlay) closeModal(overlay.id); }));
     document.addEventListener('click',event=>{ const menu=document.getElementById('accountMenu'), button=document.getElementById('accountButton'); if(menu?.classList.contains('open') && !menu.contains(event.target) && event.target!==button) closeAccountMenu(); });
