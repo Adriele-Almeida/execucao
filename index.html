@@ -589,6 +589,15 @@
           </article>
         </div>
       </section>
+      <section class="client-workspace hidden" id="clientWorkspaceSection">
+  <div class="client-workspace-head">
+    <div><button class="btn btn-ghost btn-small" type="button" onclick="closeClientWorkspace()">← Clientes</button><div class="client-workspace-title"><span class="client-dot" id="workspaceClientDot"></span><h2 id="workspaceClientName"></h2></div><p id="workspaceClientNiche"></p></div>
+    <button class="btn btn-ghost" type="button" onclick="openClientModal(state.clientWorkspaceId)">Editar cliente</button>
+  </div>
+  <div class="client-workspace-contact" id="workspaceClientContact"></div>
+  <div class="client-cards-header"><h3>Cards do cliente</h3><button class="btn btn-primary" type="button" onclick="openClientCardModal()">Novo card</button></div>
+  <div class="client-cards-grid" id="clientCardsGrid"></div>
+</section>
     </main>
   </div>
 
@@ -1277,7 +1286,7 @@
       return `
         <div class="profile-header"><span class="profile-avatar" id="profileAvatarPreview">${profileAvatar(person)}</span><div><h3>${escapeHtml(person.display_name||person.email)}</h3><p>${escapeHtml(person.email)}</p></div></div>
         ${canEditPhoto?`<div class="profile-upload-row"><label class="btn btn-ghost btn-small" for="profilePhotoInput">${person.avatar_url?'Alterar foto':'Adicionar foto'}</label><input id="profilePhotoInput" type="file" accept="image/*" onchange="selectProfilePhoto(this.files[0])"></div>
-        <div class="profile-photo-editor hidden" id="profilePhotoEditor"><label>Zoom <input id="avatarZoom" type="range" min="1" max="2" step="0.05" value="${Number(person.avatar_zoom??1)}" oninput="previewProfilePhoto()"></label><label>Posição horizontal <input id="avatarX" type="range" min="0" max="100" value="${Number(person.avatar_x??50)}" oninput="previewProfilePhoto()"></label><label>Posição vertical <input id="avatarY" type="range" min="0" max="100" value="${Number(person.avatar_y??50)}" oninput="previewProfilePhoto()"></label></div>`:''}
+        <div class="profile-photo-editor hidden" id="profilePhotoEditor"><div class="profile-cropper" onpointerdown="beginProfilePhotoDrag(event)"><img id="profileCropImage" alt=""></div><label>Zoom <input id="avatarZoom" type="range" min="1" max="2" step="0.05" value="1" oninput="setProfileCropZoom(this.value)"></label></div>`:''} 
         <div class="form-grid">
           <div class="field form-group full"><label for="profileDisplayName">Nome de usuário</label><input class="control" id="profileDisplayName" type="text" value="${escapeHtml(person.display_name||'')}"></div>
           <div class="field form-group full"><label for="profilePhone">WhatsApp</label><input class="control" id="profilePhone" type="tel" inputmode="numeric" maxlength="16" placeholder="(31) 00000-0000" value="${escapeHtml(formatPhone(person.phone||''))}" oninput="maskProfilePhone(this)"></div>
@@ -1682,5 +1691,74 @@
     document.addEventListener('keydown',event=>{ if(event.key==='Escape') { document.querySelectorAll('.modal-overlay.open').forEach(modal=>{if(modal.id!=='customCardModal')closeModal(modal.id);}); closeAccountMenu(); } });
     initializeApp(); setInterval(updateAutomaticStatuses,60000); setInterval(updateLiveClock,1000);
   </script>
-</body>
+
+<style id="client-workspace-styles">
+.client-workspace{padding:0 0 42px}.client-workspace.hidden{display:none}.client-workspace-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:22px}.client-workspace-title{display:flex;gap:11px;align-items:center}.client-workspace-title h2{margin:0}.client-workspace-contact{display:flex;flex-wrap:wrap;gap:9px;margin:14px 0 22px}.client-workspace-contact a,.client-workspace-contact span{display:inline-flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid var(--border);border-radius:7px;color:var(--muted);font-size:13px}.client-workspace-contact svg{width:15px;height:15px}.client-cards-header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:14px}.client-cards-header h3{margin:0}.client-cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}.client-card-note{color:var(--muted);font-size:13px;line-height:1.45;white-space:pre-wrap}.profile-cropper{width:220px;height:220px;overflow:hidden;border-radius:12px;border:1px solid var(--border);background:#070808;touch-action:none;position:relative;cursor:grab}.profile-cropper:active{cursor:grabbing}.profile-cropper img{width:100%;height:100%;object-fit:cover;pointer-events:none;transform-origin:center;will-change:transform}.profile-photo-editor{display:flex;gap:16px;align-items:center}.profile-photo-editor label{flex:1}.client-card-modal .modal{width:min(680px,100%)}@media(max-width:700px){.client-workspace-head{align-items:stretch;flex-direction:column}.profile-photo-editor{align-items:stretch;flex-direction:column}}
+</style>
+
+<div class="modal-overlay client-card-modal" id="clientCardModal" role="dialog" aria-modal="true" aria-labelledby="clientCardModalTitle"><div class="modal"><div class="modal-title" id="clientCardModalTitle">Novo card</div><div class="form-grid"><div class="field form-group full"><label for="clientCardTitle">Título</label><input class="control" id="clientCardTitle" type="text"></div><div class="field form-group full"><label for="clientCardObservation">Observação</label><textarea class="control" id="clientCardObservation"></textarea></div></div><div id="clientCardFields"></div><div class="field-actions"><button class="btn btn-ghost btn-small" type="button" onclick="addClientCardField('text')">+ Texto</button><button class="btn btn-ghost btn-small" type="button" onclick="addClientCardField('date')">+ Data</button><button class="btn btn-ghost btn-small" type="button" onclick="addClientCardField('link')">+ Link</button></div><div class="modal-actions"><button class="btn btn-ghost" type="button" onclick="closeModal('clientCardModal')">Cancelar</button><button class="btn btn-primary" type="button" onclick="saveClientCard()">Salvar card</button></div></div></div>
+<script id="client-workspace-script">
+const _baseLoadCloudData=loadCloudData, _baseRenderMainContent=renderMainContent, _baseProfileForm=profileForm;
+let cloudClientCards=[], editingClientCardId=null, clientCardFields=[];
+async function loadCloudData(){
+  await _baseLoadCloudData();
+  const res=await supabaseClient.from('client_cards').select('*').order('created_at',{ascending:true});
+  cloudClientCards=res.error?[]:(res.data||[]);
+}
+function clientForActivity(id){return getClients().find(c=>c.id===id);}
+function formatActivityDate(date,time){if(!date)return '';const d=formatDate(date);return time?`${d} às ${String(time).slice(0,5)}`:d;}
+function activityText(item){
+ const after=item.after_data||{}, before=item.before_data||{}, actor=item.actor?.display_name||item.actor?.email||'Sistema';
+ const type=item.entity_type, title=after.title||before.title||after.name||before.name||'sem título';
+ const entity=type==='client'?'cliente':type==='card'?'card':type==='client_card'?'card do cliente':type==='profile'?'perfil':'postagem';
+ const labels={name:'nome',instagram:'Instagram',site:'site',niche:'nicho',color:'cor de identificação',details:'informações personalizadas',display_name:'nome de usuário',phone:'WhatsApp',avatar_url:'foto de perfil',avatar_x:'foto de perfil',avatar_y:'foto de perfil',avatar_zoom:'foto de perfil',title:'título',client_id:'cliente',responsible_id:'responsável',stage:'status',status:'status',post_date:'data',post_time:'horário',type:'tipo',canva:'link da arte',legenda:'legenda',notes:'observações',observations:'observação',fields:'campos personalizados'};
+ const changed=Object.keys(after).filter(k=>k!=='updated_at'&&k!=='updated_by'&&k!=='created_at'&&k!=='id'&&JSON.stringify(after[k])!==JSON.stringify(before[k]));
+ if(item.action==='insert'){
+   if(type==='post'&&after.status==='Programado'){const client=clientForActivity(after.client_id);return `${actor} programou a postagem “${title}” para ${client?.name||'cliente não identificado'} em ${formatActivityDate(after.post_date,after.post_time)}.`;}
+   return `${actor} criou ${type==='post'?'a':'o'} ${entity} “${title}”.`;
+ }
+ if(item.action==='delete')return `${actor} excluiu ${type==='post'?'a':'o'} ${entity} “${title}”.`;
+ const statusKey=type==='post'?'status':type==='card'?'stage':null;
+ if(statusKey&&changed.includes(statusKey))return `${actor} mudou o status d${type==='post'?'a postagem':'o card'} “${title}” para ${stageLabel(after[statusKey])}.`;
+ const unique=[...new Set(changed.map(k=>labels[k]).filter(Boolean))];
+ if(!unique.length)return `${actor} alterou ${type==='post'?'a':'o'} ${entity} “${title}”.`;
+ return `${actor} alterou ${unique.join(', ')} d${type==='post'?'a':'o'} ${entity} “${title}”.`;
+}
+function openClientWorkspace(id){if(!getClients().some(c=>c.id===id))return;state.clientWorkspaceId=id;state.clientId='';render();}
+function closeClientWorkspace(){state.clientWorkspaceId='';openView('Clientes');}
+function renderClientWorkspace(){
+ const section=document.getElementById('clientWorkspaceSection'), client=getClients().find(c=>c.id===state.clientWorkspaceId);
+ if(!client){section.classList.add('hidden');return;}
+ ['summaryGrid','clientsSection','calendarSection','postsSection','customCardsSection','orderExecutionSection','settingsSection','filterPanel','filterActions'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
+ document.querySelector('.page-header')?.classList.add('hidden');section.classList.remove('hidden');
+ document.getElementById('workspaceClientName').textContent=client.name;document.getElementById('workspaceClientNiche').textContent=client.niche||'';document.getElementById('workspaceClientDot').style.background=client.color||'var(--cyan)';
+ const instagram=safeUrl(client.instagram),site=safeUrl(client.site);
+ document.getElementById('workspaceClientContact').innerHTML=`${instagram?`<a href="${instagram}" target="_blank" rel="noopener">${contactIcon('instagram')} Instagram</a>`:''}${site?`<a href="${site}" target="_blank" rel="noopener">Site</a>`:''}`;
+ const cards=cloudClientCards.filter(c=>c.client_id===client.id);document.getElementById('clientCardsGrid').innerHTML=cards.length?cards.map(renderClientCardSummary).join(''):'<div class="empty-state"><strong>Nenhum card criado</strong><span>Use “Novo card” para montar as informações deste cliente.</span></div>';
+}
+function renderMainContent(){if(state.clientWorkspaceId){renderClientWorkspace();return;}_baseRenderMainContent();document.getElementById('clientWorkspaceSection')?.classList.add('hidden');}
+function fieldData(fields){return fields.filter(f=>String(f.value||'').trim()||String(f.label||'').trim()).map(f=>({type:f.type,label:(f.label||'').trim()||null,value:(f.value||'').trim()}));}
+function renderClientCardFields(){const h=document.getElementById('clientCardFields');if(!h)return;h.innerHTML=clientCardFields.map(f=>{const remove=`<button type="button" class="field-remove-link" onclick="removeClientCardField('${f.id}')">Remover campo</button>`;if(f.type==='text')return `<div class="custom-field-card"><label>Título</label><input class="control" value="${escapeHtml(f.label||'')}" oninput="updateClientCardField('${f.id}','label',this.value)"><label>Texto</label><textarea class="control" oninput="updateClientCardField('${f.id}','value',this.value)">${escapeHtml(f.value||'')}</textarea>${remove}</div>`;if(f.type==='link')return `<div class="custom-field-card"><label>Link</label><input class="control" type="url" placeholder="https://" value="${escapeHtml(f.value||'')}" oninput="updateClientCardField('${f.id}','value',this.value)">${remove}</div>`;const x=splitCardDateValue(f.value);return `<div class="custom-field-card"><div class="custom-date-inputs"><input class="control native-picker" type="date" value="${escapeHtml(x.date)}" onchange="updateClientCardDateField('${f.id}','date',this.value)"><input class="control native-picker" type="time" value="${escapeHtml(x.time)}" onchange="updateClientCardDateField('${f.id}','time',this.value)"></div>${remove}</div>`;}).join('');}
+function addClientCardField(type){clientCardFields.push({id:`cc-${Date.now()}-${Math.random()}`,type,label:'',value:''});renderClientCardFields();}
+function updateClientCardField(id,key,value){const f=clientCardFields.find(x=>x.id===id);if(f)f[key]=value;}
+function updateClientCardDateField(id,key,value){const f=clientCardFields.find(x=>x.id===id);if(!f)return;const x=splitCardDateValue(f.value);x[key]=value;f.value=[x.date,x.time].filter(Boolean).join('T');}
+function removeClientCardField(id){clientCardFields=clientCardFields.filter(f=>f.id!==id);renderClientCardFields();}
+function clientCardFieldsHtml(card){return (card.fields||[]).map(f=>f.type==='link'?(safeUrl(f.value)?`<p><a href="${safeUrl(f.value)}" target="_blank" rel="noopener">Abrir link</a></p>`:''):f.type==='date'?(`<p>${formatDate(splitCardDateValue(f.value).date)}${splitCardDateValue(f.value).time?' · '+escapeHtml(splitCardDateValue(f.value).time):''}</p>`):`<p>${escapeHtml(f.value||'')}</p>`).join('');}
+function renderClientCardSummary(card){return `<button class="custom-card" type="button" onclick="openClientCardModal('${card.id}')"><strong>${escapeHtml(card.title||'Card sem título')}</strong>${card.observations?`<span class="client-card-note">${escapeHtml(card.observations)}</span>`:''}${clientCardFieldsHtml(card)}</button>`;}
+function openClientCardModal(id=null){editingClientCardId=id;const card=id?cloudClientCards.find(c=>c.id===id):null;if(id&&!card)return;document.getElementById('clientCardModalTitle').textContent=card?'Editar card':'Novo card';document.getElementById('clientCardTitle').value=card?.title||'';document.getElementById('clientCardObservation').value=card?.observations||'';clientCardFields=(card?.fields||[]).map(f=>({...f,id:`cc-${Date.now()}-${Math.random()}`}));renderClientCardFields();document.getElementById('clientCardModal').classList.add('open');}
+async function saveClientCard(){const clientId=state.clientWorkspaceId;if(!clientId)return;const p={client_id:clientId,title:document.getElementById('clientCardTitle').value.trim()||null,observations:document.getElementById('clientCardObservation').value.trim()||null,fields:fieldData(clientCardFields),updated_by:currentProfile.id};const q=editingClientCardId?supabaseClient.from('client_cards').update(p).eq('id',editingClientCardId):supabaseClient.from('client_cards').insert({...p,created_by:currentProfile.id});const {error}=await q;if(error)return toast('Não foi possível salvar o card do cliente.');closeModal('clientCardModal');await loadCloudData();render();toast('Card salvo.');}
+function cardDraftPayload(){return {title:document.getElementById('cardTitle').value.trim()||null,client_id:document.getElementById('cardClient').value||null,responsible_id:document.getElementById('cardResponsible').value||null,stage:document.getElementById('cardStatus').value||null,observations:document.getElementById('cardObservations').value.trim()||null,fields:fieldData(cardFields),updated_by:currentProfile.id,is_draft:true};}
+function scheduleCardDraft(){if((editingCardId&&!draftCardId)||!currentProfile)return;clearTimeout(cardDraftTimer);cardDraftTimer=setTimeout(()=>saveCardDraft(),600);}
+async function saveCardDraft(){const payload=cardDraftPayload();if(!payload.title&&!payload.client_id&&!payload.responsible_id&&!payload.stage&&!payload.observations&&!payload.fields.length)return true;const q=draftCardId?supabaseClient.from('custom_cards').update(payload).eq('id',draftCardId).select().single():supabaseClient.from('custom_cards').insert({...payload,created_by:currentProfile.id}).select().single();const {data,error}=await q;if(error)return false;draftCardId=data.id;editingCardId=data.id;document.getElementById('customCardModalTitle').textContent='Rascunho do card';return true;}
+async function closeCustomCardToDraft(){if(editingCardId&&!draftCardId){document.getElementById('customCardModal').classList.remove('open');return;}const ok=await saveCardDraft();if(!ok)return toast('Não foi possível salvar o rascunho.');document.getElementById('customCardModal').classList.remove('open');await loadCloudData();render();toast('Rascunho salvo.');}
+async function saveCustomCard(){const payload={...cardDraftPayload(),is_draft:false};let cardId=editingCardId,previousResponsible='';if(editingCardId){const current=cloudCards.find(c=>c.id===editingCardId);previousResponsible=current?.responsible_id||'';const {error}=await supabaseClient.from('custom_cards').update(payload).eq('id',editingCardId);if(error)return toast('Não foi possível salvar o card.');}else{const {data,error}=await supabaseClient.from('custom_cards').insert({...payload,created_by:currentProfile.id}).select().single();if(error)return toast('Não foi possível salvar o card.');cardId=data.id;}if(payload.responsible_id&&payload.responsible_id!==previousResponsible)await notifyCardRecipient(cardId,payload.responsible_id,'demanda');document.getElementById('customCardModal').classList.remove('open');editingCardId=null;draftCardId=null;await loadCloudData();render();toast('Card salvo.');}
+function selectProfilePhoto(file){if(!file)return;if(!file.type.startsWith('image/'))return toast('Escolha uma imagem.');if(file.size>5*1024*1024)return toast('A foto deve ter até 5 MB.');pendingProfilePhoto=file;profilePhotoDraftUrl=URL.createObjectURL(file);window._crop={x:50,y:50,zoom:1};document.getElementById('profilePhotoEditor')?.classList.remove('hidden');previewProfilePhoto();}
+function previewProfilePhoto(){const crop=window._crop||{x:50,y:50,zoom:1},src=profilePhotoDraftUrl||(cloudProfiles.find(p=>p.id===profileEditingId)?.avatar_url)||currentProfile?.avatar_url;const img=document.getElementById('profileCropImage'),preview=document.getElementById('profileAvatarPreview');if(img&&src){img.src=src;img.style.transform=`translate(${(50-crop.x)*.8}%,${(50-crop.y)*.8}%) scale(${crop.zoom})`;}if(preview&&src)preview.innerHTML=`<img src="${escapeHtml(src)}" alt="" style="object-position:${crop.x}% ${crop.y}%;transform:scale(${crop.zoom})">`;}
+function setProfileCropZoom(v){window._crop=window._crop||{x:50,y:50,zoom:1};window._crop.zoom=Number(v);previewProfilePhoto();}
+function beginProfilePhotoDrag(e){const c=window._crop||{x:50,y:50,zoom:1},start={x:e.clientX,y:e.clientY,cx:c.x,cy:c.y};const move=x=>{c.x=Math.max(0,Math.min(100,start.cx-(x.clientX-start.x)/2));c.y=Math.max(0,Math.min(100,start.cy-(x.clientY-start.y)/2));window._crop=c;previewProfilePhoto();};const end=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',end);};window.addEventListener('pointermove',move);window.addEventListener('pointerup',end);e.preventDefault();}
+function profileValues(){const b={display_name:document.getElementById('profileDisplayName').value.trim()||null,phone:(document.getElementById('profilePhone').value||'').replace(/\D/g,'')||null,instagram:(document.getElementById('profileInstagram').value||'').trim().replace(/^@/,'')||null};const c=window._crop||{x:50,y:50,zoom:1};return {...b,avatar_x:c.x,avatar_y:c.y,avatar_zoom:c.zoom};}
+document.getElementById('customCardModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeCustomCardToDraft();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('customCardModal').classList.contains('open')){e.preventDefault();closeCustomCardToDraft();}});
+document.addEventListener('click',e=>{const i=e.target.closest('input.native-picker,input[type="date"],input[type="time"]');if(i&&typeof i.showPicker==='function'){try{i.showPicker();}catch(_){}}});
+</script></body>
 </html>
