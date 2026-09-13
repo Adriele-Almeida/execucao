@@ -1418,7 +1418,7 @@
 
     async function initializeApp() {
       if(!window.supabase || SUPABASE_URL.startsWith('__')) return;
-      if(!supabaseClient) supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:false,autoRefreshToken:true,detectSessionInUrl:true}});
+      if(!supabaseClient) supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
       const authScreen=document.getElementById('authScreen');
       const recoveryLink=hasRecoveryLink();
       const {data:{session}}=await supabaseClient.auth.getSession();
