@@ -678,7 +678,7 @@
       <div class="field"><label for="authEmail">E-mail</label><input class="control" id="authEmail" type="email" autocomplete="username" required></div>
       <div class="field"><label for="authPassword">Senha</label><div class="password-wrap"><input class="control" id="authPassword" type="password" autocomplete="current-password" required><button class="password-toggle" type="button" onclick="togglePasswordVisibility('authPassword',this)">Mostrar</button></div></div>
       <button class="btn btn-primary" id="authSubmit" type="submit" style="width:100%">Entrar</button>
-      <button class="auth-link" type="button" onclick="requestPasswordReset()">Esqueci minha senha</button>
+      <button class="auth-link" id="passwordResetRequest" type="button" onclick="requestPasswordReset()">Esqueci minha senha</button>
       <div class="auth-error" id="authError"></div>
     </form>
     <form class="auth-card hidden" id="passwordRecoveryForm" onsubmit="saveNewPassword(event)">
@@ -1179,6 +1179,7 @@
     let currentProfile = null;
     let activityReadAt = null;
     let realtimeChannel = null;
+    let passwordResetCooldown = null;
 
     function getClients() { return cloudClients; }
     function getPosts() { return cloudPosts; }
@@ -1199,12 +1200,45 @@
       document.getElementById('authScreen').classList.remove('hidden');
     }
 
+    function authErrorMessage(error, context='login') {
+      const message=String(error?.message||'').toLowerCase(), status=Number(error?.status||0);
+      if(context==='login' && (status===400 || message.includes('invalid login credentials'))) return 'E-mail ou senha inválidos.';
+      if(context==='recovery' && (status===429 || message.includes('security purposes') || message.includes('rate limit'))) return 'Aguarde 60 segundos antes de solicitar outro link.';
+      if(context==='recovery') return 'Não foi possível enviar o link de redefinição. Tente novamente em alguns minutos.';
+      if(context==='new-password' && (status===403 || message.includes('token') || message.includes('session'))) return 'Este link de redefinição não é mais válido. Solicite outro link.';
+      if(context==='new-password') return 'Não foi possível atualizar a senha. Solicite um novo link.';
+      return 'Não foi possível concluir esta ação. Tente novamente.';
+    }
+
+    function setPasswordResetCooldown(seconds=60) {
+      const button=document.getElementById('passwordResetRequest');
+      if(!button) return;
+      clearInterval(passwordResetCooldown);
+      let remaining=seconds;
+      button.disabled=true;
+      button.textContent=`Aguarde ${remaining}s para solicitar novamente`;
+      passwordResetCooldown=setInterval(()=>{
+        remaining-=1;
+        if(remaining<=0) {
+          clearInterval(passwordResetCooldown);
+          button.disabled=false;
+          button.textContent='Esqueci minha senha';
+          return;
+        }
+        button.textContent=`Aguarde ${remaining}s para solicitar novamente`;
+      },1000);
+    }
+
     async function requestPasswordReset() {
       const email=document.getElementById('authEmail').value.trim(), error=document.getElementById('authError');
       if(!email) { error.style.color='var(--red)'; error.textContent='Informe seu e-mail para receber o link de redefinição.'; return; }
+      const button=document.getElementById('passwordResetRequest');
+      if(button?.disabled) return;
+      button.disabled=true;
       const {error:resetError}=await supabaseClient.auth.resetPasswordForEmail(email,{redirectTo:`${location.origin}${location.pathname}`});
-      if(resetError) { error.style.color='var(--red)'; error.textContent='Não foi possível enviar o link. Tente novamente.'; return; }
-      error.style.color='var(--green)'; error.textContent='Enviamos um link para redefinir sua senha.';
+      if(resetError) { button.disabled=false; error.style.color='var(--red)'; error.textContent=authErrorMessage(resetError,'recovery'); return; }
+      error.style.color='var(--green)'; error.textContent='Link de redefinição enviado. Use somente o link mais recente recebido.';
+      setPasswordResetCooldown();
     }
 
     async function saveNewPassword(event) {
@@ -1213,7 +1247,7 @@
       error.textContent=''; submit.disabled=true; submit.textContent='Salvando...';
       const {error:updateError}=await supabaseClient.auth.updateUser({password:document.getElementById('newPassword').value});
       submit.disabled=false; submit.textContent='Salvar nova senha';
-      if(updateError) { error.textContent='Não foi possível atualizar a senha. Abra novamente o link recebido por e-mail.'; return; }
+      if(updateError) { error.textContent=authErrorMessage(updateError,'new-password'); return; }
       history.replaceState({},document.title,location.pathname);
       document.getElementById('passwordRecoveryForm').classList.add('hidden');
       document.querySelector('#authScreen form:first-child').classList.remove('hidden');
@@ -1236,7 +1270,7 @@
       error.textContent=''; submit.disabled=true; submit.textContent='Entrando...';
       const {error:signInError}=await supabaseClient.auth.signInWithPassword({email:document.getElementById('authEmail').value.trim(),password:document.getElementById('authPassword').value});
       submit.disabled=false; submit.textContent='Entrar';
-      if(signInError) { error.textContent='Não foi possível entrar. Confira seu e-mail e senha.'; return; }
+      if(signInError) { error.textContent=authErrorMessage(signInError,'login'); return; }
       await initializeApp();
     }
 
@@ -1321,6 +1355,20 @@
       const auth=document.getElementById('authScreen'); auth.classList.remove('hidden','auth-checking');
     }
 
+    function cloudLoadError(target,error) {
+      const detail=String(error?.message||error?.code||'Erro sem detalhe do servidor.');
+      const failure=new Error(`${target}: ${detail}`);
+      failure.target=target;
+      failure.cause=error;
+      return failure;
+    }
+
+    function firstCloudFailure(results) {
+      const entries=[['Clientes',results[0]],['Postagens',results[1]],['Cards',results[2]],['Atualizações dos cards',results[3]],['Notificações dos cards',results[4]],['Histórico de atividades',results[5]],['Perfis',results[6]],['Leituras de atividades',results[7]],['Notificações ocultadas',results[8]]];
+      const failed=entries.find(([,result])=>result.error);
+      return failed?cloudLoadError(failed[0],failed[1].error):null;
+    }
+
     async function loadCloudData() {
       const [clientsResult,postsResult,cardsResult,cardUpdatesResult,cardNotificationsResult,activitiesResult,profilesResult,readsResult,dismissalsResult]=await Promise.all([
         supabaseClient.from('clients').select('*').order('name'),
@@ -1333,7 +1381,8 @@
         supabaseClient.from('activity_reads').select('last_read_at').eq('user_id',currentProfile.id).maybeSingle(),
         supabaseClient.from('notification_dismissals').select('activity_id').eq('user_id',currentProfile.id)
       ]);
-      if(clientsResult.error || postsResult.error || cardsResult.error || cardUpdatesResult.error || cardNotificationsResult.error || activitiesResult.error || dismissalsResult.error) throw new Error('Não foi possível carregar os dados compartilhados.');
+      const failure=firstCloudFailure([clientsResult,postsResult,cardsResult,cardUpdatesResult,cardNotificationsResult,activitiesResult,profilesResult,readsResult,dismissalsResult]);
+      if(failure) throw failure;
       const people=new Map((profilesResult.data||[]).map(person=>[person.id,person]));
       cloudProfiles=profilesResult.data||[];
       cloudClients=(clientsResult.data||[]).map(mapClient);
@@ -1359,13 +1408,28 @@
       if(importedPosts.length) { const {error}=await supabaseClient.from('posts').insert(importedPosts); if(error) throw error; }
     }
 
+    function hasRecoveryLink() {
+      const query=new URLSearchParams(location.search);
+      return location.hash.includes('type=recovery') || query.has('code');
+    }
+
     async function initializeApp() {
       if(!window.supabase || SUPABASE_URL.startsWith('__')) return;
       if(!supabaseClient) supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-      const {data:{session}}=await supabaseClient.auth.getSession();
       const authScreen=document.getElementById('authScreen');
+      const recoveryLink=hasRecoveryLink();
+      const {data:{session}}=await supabaseClient.auth.getSession();
+      if(recoveryLink) {
+        if(!session) {
+          document.getElementById('authError').textContent='Este link de redefinição não é mais válido. Solicite outro link.';
+          authScreen.classList.remove('hidden','auth-checking');
+          return;
+        }
+        authScreen.classList.remove('auth-checking');
+        showPasswordRecovery();
+        return;
+      }
       if(!session) { authScreen.classList.remove('hidden','auth-checking'); return; }
-      if(location.hash.includes('type=recovery')) { authScreen.classList.remove('auth-checking'); showPasswordRecovery(); return; }
       const {data:profile,error}=await supabaseClient.from('profiles').select('*').eq('id',session.user.id).maybeSingle();
       if(error || !profile || !profile.active) { await supabaseClient.auth.signOut(); document.getElementById('authError').textContent='Este acesso não está ativo.'; authScreen.classList.remove('hidden','auth-checking'); return; }
       currentProfile=profile;
@@ -1378,7 +1442,11 @@
         render();
         subscribeToChanges();
         await updateAutomaticStatuses();
-      } catch(error) { document.getElementById('authError').textContent='A base foi criada, mas não foi possível carregar os dados.'; authScreen.classList.remove('hidden','auth-checking'); }
+      } catch(error) {
+        console.error('Falha ao carregar a base operacional:',error);
+        document.getElementById('authError').textContent=`Falha ao carregar a base: ${error.message||'erro desconhecido.'}`;
+        authScreen.classList.remove('hidden','auth-checking');
+      }
     }
 
     function subscribeToChanges() {
@@ -1703,7 +1771,8 @@ let cloudClientCards=[], editingClientCardId=null, clientCardFields=[];
 async function loadCloudData(){
   await _baseLoadCloudData();
   const res=await supabaseClient.from('client_cards').select('*').order('created_at',{ascending:true});
-  cloudClientCards=res.error?[]:(res.data||[]);
+  if(res.error) throw cloudLoadError('Cards dos clientes',res.error);
+  cloudClientCards=res.data||[];
 }
 function clientForActivity(id){return getClients().find(c=>c.id===id);}
 function formatActivityDate(date,time){if(!date)return '';const d=formatDate(date);return time?`${d} às ${String(time).slice(0,5)}`:d;}
