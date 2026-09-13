@@ -1768,12 +1768,13 @@
 <script id="client-workspace-script">
 const _baseLoadCloudData=loadCloudData, _baseRenderMainContent=renderMainContent, _baseProfileForm=profileForm;
 let cloudClientCards=[], editingClientCardId=null, clientCardFields=[];
-async function loadCloudData(){
+async function loadCloudDataWithClientCards(){
   await _baseLoadCloudData();
   const res=await supabaseClient.from('client_cards').select('*').order('created_at',{ascending:true});
   if(res.error) throw cloudLoadError('Cards dos clientes',res.error);
   cloudClientCards=res.data||[];
 }
+window.loadCloudData=loadCloudDataWithClientCards;
 function clientForActivity(id){return getClients().find(c=>c.id===id);}
 function formatActivityDate(date,time){if(!date)return '';const d=formatDate(date);return time?`${d} às ${String(time).slice(0,5)}`:d;}
 function activityText(item){
