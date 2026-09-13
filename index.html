@@ -1267,10 +1267,13 @@
       event.preventDefault();
       const error=document.getElementById('authError');
       const submit=document.getElementById('authSubmit');
+      if(submit.disabled) return;
       error.textContent=''; submit.disabled=true; submit.textContent='Entrando...';
       const {error:signInError}=await supabaseClient.auth.signInWithPassword({email:document.getElementById('authEmail').value.trim(),password:document.getElementById('authPassword').value});
       submit.disabled=false; submit.textContent='Entrar';
       if(signInError) { error.textContent=authErrorMessage(signInError,'login'); return; }
+      error.style.color='var(--green)';
+      error.textContent='Acesso confirmado. Abrindo o painel...';
       await initializeApp();
     }
 
@@ -1415,7 +1418,7 @@
 
     async function initializeApp() {
       if(!window.supabase || SUPABASE_URL.startsWith('__')) return;
-      if(!supabaseClient) supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+      if(!supabaseClient) supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:false,autoRefreshToken:true,detectSessionInUrl:true}});
       const authScreen=document.getElementById('authScreen');
       const recoveryLink=hasRecoveryLink();
       const {data:{session}}=await supabaseClient.auth.getSession();
@@ -1444,7 +1447,7 @@
         await updateAutomaticStatuses();
       } catch(error) {
         console.error('Falha ao carregar a base operacional:',error);
-        document.getElementById('authError').textContent=`Falha ao carregar a base: ${error.message||'erro desconhecido.'}`;
+        document.getElementById('authError').textContent='Não foi possível abrir o painel. Feche o aplicativo e tente entrar novamente.';
         authScreen.classList.remove('hidden','auth-checking');
       }
     }
