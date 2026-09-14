@@ -582,7 +582,7 @@
           </article>
           <article class="settings-card cards-management">
             <h3>Cards</h3><p>Visualize, filtre e selecione os cards que deseja excluir.</p>
-            <div class="form-grid"><div class="field form-group"><label for="cardManageClient">Cliente</label><select class="control" id="cardManageClient" onchange="renderCardManagement()"></select></div><div class="field form-group"><label for="cardManageStatus">Status</label><select class="control" id="cardManageStatus" onchange="renderCardManagement()"><option value="">Todos os status</option><option value="none">Sem status</option><option value="criar">Criar</option><option value="conferir">Conferir</option><option value="refinar">Refinar</option><option value="pronto">Pronto</option><option value="programar">Programar</option><option value="programado">Programado</option><option value="publicado">Publicado</option></select></div></div>
+            <div class="form-grid"><div class="field form-group"><label for="cardManageClient">Cliente</label><select class="control" id="cardManageClient" onchange="renderCardManagement()"></select></div><div class="field form-group"><label for="cardManageStatus">Status</label><select class="control" id="cardManageStatus" onchange="renderCardManagement()"><option value="">Todos os status</option><option value="none">Sem status</option><option value="criar">Criar</option><option value="conferir">Conferir</option><option value="refinar">Refinar</option><option value="pronto">Pronto</option><option value="programar">Programar</option><option value="programado">Programado</option><option value="publicado">Publicado</option><option value="concluido">Concluído</option></select></div></div>
             <div class="card-management-list" id="cardManagementList"></div><button class="btn btn-danger" id="deleteSelectedCardsButton" type="button" onclick="deleteSelectedCards()" disabled>Excluir cards selecionados</button>
           </article>
           <article class="settings-card hidden" id="accessManagementCard">
@@ -609,7 +609,7 @@
       <div class="modal-title" id="postModalTitle">Nova postagem</div>
       <div class="form-grid">
         <div class="field form-group"><label for="pClient">Cliente</label><select class="control" id="pClient"><option value="">Selecione o cliente</option></select></div>
-        <div class="field form-group"><label for="pStatus">Etapa</label><select class="control" id="pStatus" onchange="toggleScheduleFields()"><option value="">Selecione a etapa</option><option>Criar</option><option>Conferir</option><option>Refinar</option><option>Pronto</option><option>Programar</option><option>Programado</option><option>Publicado</option></select></div>
+        <div class="field form-group"><label for="pStatus">Etapa</label><select class="control" id="pStatus" onchange="toggleScheduleFields()"><option value="">Selecione a etapa</option><option>Criar</option><option>Conferir</option><option>Refinar</option><option>Pronto</option><option>Programar</option><option>Programado</option><option>Publicado</option><option>Concluído</option></select></div>
         <div class="field form-group"><label for="pType">Tipo</label><select class="control" id="pType"><option value="">Selecione o tipo</option><option>Carrossel</option><option>Post</option><option>Story</option><option>Reels</option></select></div>
         <div class="field form-group"><label for="pDate">Data</label><input class="control" id="pDate" type="date"></div>
         <div class="field form-group"><label for="pTime">Horário</label><input class="control" id="pTime" type="time"></div>
@@ -653,7 +653,7 @@
         <div class="field form-group full"><label for="cardTitle">Título</label><input class="control" id="cardTitle" type="text"></div>
         <div class="field form-group"><select class="control card-assignment-control" id="cardClient" aria-label="Cliente"><option value="">Cliente</option></select></div>
         <div class="field form-group"><select class="control card-assignment-control" id="cardResponsible" aria-label="Responsável"><option value="">Responsável</option></select></div>
-        <div class="field form-group full"><label for="cardStatus">Status</label><select class="control" id="cardStatus"><option value=""></option><option value="criar">Criar</option><option value="conferir">Conferir</option><option value="refinar">Refinar</option><option value="pronto">Pronto</option><option value="programar">Programar</option><option value="programado">Programado</option><option value="publicado">Publicado</option></select></div>
+        <div class="field form-group full"><label for="cardStatus">Status</label><select class="control" id="cardStatus"><option value=""></option><option value="criar">Criar</option><option value="conferir">Conferir</option><option value="refinar">Refinar</option><option value="pronto">Pronto</option><option value="programar">Programar</option><option value="programado">Programado</option><option value="publicado">Publicado</option><option value="concluido">Concluído</option></select></div>
         <div class="field form-group full"><label for="cardObservations">Observação</label><textarea class="control" id="cardObservations"></textarea></div>
         <div class="field form-group full"><div id="customCardFields"></div><div class="settings-actions card-field-actions"><button class="btn btn-ghost btn-small" type="button" onclick="addCustomCardField('text')">+ Texto</button><button class="btn btn-ghost btn-small" type="button" onclick="addCustomCardField('date')">+ Data</button><button class="btn btn-ghost btn-small" type="button" onclick="addCustomCardField('link')">+ Link</button></div></div>
       </div>
@@ -1637,7 +1637,7 @@
     function updateCustomCardDateField(id,part,value) { const field=cardFields.find(item=>item.id===id); if(!field) return; const parsed=splitCardDateValue(field.value); parsed[part]=value; field.value=parsed.date+(parsed.time?'|'+parsed.time:''); }
     function copyCardField(id) { const field=cardFields.find(item=>item.id===id); if(!field?.value) return toast('Não há texto para copiar.'); navigator.clipboard?.writeText(field.value).then(()=>toast('Texto copiado.')).catch(()=>toast('Não foi possível copiar o texto.')); }
     function removeCustomCardField(id) { if(!editingCardId) return; if(!confirm('Remover este campo ao salvar a edição?')) return; cardFields=cardFields.filter(item=>item.id!==id); renderCustomCardFields(); }
-    function stageLabel(stage) { return ({rascunho:'Rascunho',criar:'Criar',conferir:'Conferir',refinar:'Refinar',pronto:'Pronto',programar:'Programar',programado:'Programado',publicado:'Publicado'})[stage]||'Sem status'; }
+    function stageLabel(stage) { return ({rascunho:'Rascunho',criar:'Criar',conferir:'Conferir',refinar:'Refinar',pronto:'Pronto',programar:'Programar',programado:'Programado',publicado:'Publicado',concluido:'Concluído'})[stage]||'Sem status'; }
     function getCardClient(card) { return getClients().find(client=>client.id===card.client_id)||null; }
     function cardOwner(card) { return cloudProfiles.find(person=>person.id===card.created_by)||null; }
     function canEditCardOrientation(card) { return currentProfile?.role==='admin' || card.created_by===currentProfile?.id; }
@@ -1686,7 +1686,7 @@
       const card=cloudCards.find(item=>item.id===cardId); if(!card) return;
       const client=getCardClient(card),owner=cardOwner(card),responsible=cloudProfiles.find(person=>person.id===card.responsible_id),color=client?.color||'var(--cyan)',updates=cloudCardUpdates.filter(item=>item.card_id===card.id),canEdit=canEditCardOrientation(card);
       document.getElementById('cardDetailTitle').textContent=card.title||'Card';
-      document.getElementById('cardDetailContent').innerHTML=`<div class="card-client-name" style="color:${escapeHtml(color)}">${escapeHtml(client?.name||'Sem cliente vinculado')}</div><p style="margin-top:8px;color:var(--muted)">Criado por ${escapeHtml(owner?.display_name||owner?.email||'Usuária removida')} em ${new Date(card.created_at).toLocaleString('pt-BR')}</p><div class="card-detail-section"><h4>Observação</h4>${card.observations?`<p>${escapeHtml(card.observations)}</p>`:''}${cardFieldsHtml(card)}${canEdit?`<button class="btn btn-ghost btn-small" type="button" onclick="closeModal('cardDetailModal');openCustomCardModal('', '${card.id}')">Editar orientação</button>`:''}</div><div class="card-detail-section"><h4>Andamento</h4><div class="form-grid"><div class="field form-group"><label for="cardStageAction">Status</label><select class="control" id="cardStageAction"><option value=""></option><option value="criar">Criar</option><option value="conferir">Conferir</option><option value="refinar">Refinar</option><option value="programado">Programado</option><option value="publicado">Publicado</option></select></div><div class="field form-group"><label>Responsável</label><div class="control" style="display:flex;align-items:center">${escapeHtml(responsible?.display_name||responsible?.email||'Sem responsável')}</div></div><div class="field form-group full"><label for="cardProgressText">Registrar execução ou observação</label><textarea class="control" id="cardProgressText"></textarea></div></div><div class="modal-actions"><button class="btn btn-ghost" type="button" onclick="closeModal('cardDetailModal')">Fechar</button><button class="btn btn-primary" type="button" onclick="saveCardProgress('${card.id}')">Registrar atualização</button></div></div><div class="card-detail-section"><h4>Histórico do card</h4><div class="card-history">${updates.length?updates.map(update=>`<div class="card-history-item"><strong>${escapeHtml(update.author?.display_name||update.author?.email||'Usuária')}</strong> ${update.action_type==='mudanca_de_etapa'?`moveu de ${stageLabel(update.from_stage)} para ${stageLabel(update.to_stage)}`:(update.action_type==='execucao'?'registrou uma execução':'adicionou uma observação')}${update.content?`<p>${escapeHtml(update.content)}</p>`:''}<time>${new Date(update.created_at).toLocaleString('pt-BR')}</time></div>`).join(''):'<p>Nenhuma atualização registrada.</p>'}</div></div>`;
+      document.getElementById('cardDetailContent').innerHTML=`<div class="card-client-name" style="color:${escapeHtml(color)}">${escapeHtml(client?.name||'Sem cliente vinculado')}</div><p style="margin-top:8px;color:var(--muted)">Criado por ${escapeHtml(owner?.display_name||owner?.email||'Usuária removida')} em ${new Date(card.created_at).toLocaleString('pt-BR')}</p><div class="card-detail-section"><h4>Observação</h4>${card.observations?`<p>${escapeHtml(card.observations)}</p>`:''}${cardFieldsHtml(card)}${canEdit?`<button class="btn btn-ghost btn-small" type="button" onclick="closeModal('cardDetailModal');openCustomCardModal('', '${card.id}')">Editar orientação</button>`:''}</div><div class="card-detail-section"><h4>Andamento</h4><div class="form-grid"><div class="field form-group"><label for="cardStageAction">Status</label><select class="control" id="cardStageAction"><option value=""></option><option value="criar">Criar</option><option value="conferir">Conferir</option><option value="refinar">Refinar</option><option value="pronto">Pronto</option><option value="programar">Programar</option><option value="programado">Programado</option><option value="publicado">Publicado</option><option value="concluido">Concluído</option></select></div><div class="field form-group"><label>Responsável</label><div class="control" style="display:flex;align-items:center">${escapeHtml(responsible?.display_name||responsible?.email||'Sem responsável')}</div></div><div class="field form-group full"><label for="cardProgressText">Registrar execução ou observação</label><textarea class="control" id="cardProgressText"></textarea></div></div><div class="modal-actions"><button class="btn btn-ghost" type="button" onclick="closeModal('cardDetailModal')">Fechar</button><button class="btn btn-primary" type="button" onclick="saveCardProgress('${card.id}')">Registrar atualização</button></div></div><div class="card-detail-section"><h4>Histórico do card</h4><div class="card-history">${updates.length?updates.map(update=>`<div class="card-history-item"><strong>${escapeHtml(update.author?.display_name||update.author?.email||'Usuária')}</strong> ${update.action_type==='mudanca_de_etapa'?`moveu de ${stageLabel(update.from_stage)} para ${stageLabel(update.to_stage)}`:(update.action_type==='execucao'?'registrou uma execução':'adicionou uma observação')}${update.content?`<p>${escapeHtml(update.content)}</p>`:''}<time>${new Date(update.created_at).toLocaleString('pt-BR')}</time></div>`).join(''):'<p>Nenhuma atualização registrada.</p>'}</div></div>`;
       document.getElementById('cardStageAction').value=card.stage||'criar'; document.getElementById('cardDetailModal').classList.add('open');
     }
     async function saveCardProgress(cardId) {
@@ -1828,5 +1828,156 @@ function profileValues(){const b={display_name:document.getElementById('profileD
 document.getElementById('customCardModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeCustomCardToDraft();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('customCardModal').classList.contains('open')){e.preventDefault();closeCustomCardToDraft();}});
 document.addEventListener('click',e=>{const i=e.target.closest('input.native-picker,input[type="date"],input[type="time"]');if(i&&typeof i.showPicker==='function'){try{i.showPicker();}catch(_){}}});
-</script></body>
+</script><script id="productivity-pipeline-script">(function phase1Installer(){
+  const productivityStatuses=['Criar','Conferir','Refinar','Pronto','Programar','Programado','Publicado','Concluído'];
+  STATUSES.splice(0,STATUSES.length,...productivityStatuses);
+  NAV_ITEMS.splice(0,NAV_ITEMS.length,'Painel','Ordem de Execução','Clientes',...productivityStatuses,'Configurações','Todos');
+  VIEW_TEXT['Concluído']='Atividades e conteúdos concluídos.';
+  let selectedStatuses=new Set();
+  let selectedClients=new Set();
+  let clientPickerOpen=false;
+
+  const style=document.createElement('style');
+  style.textContent=`
+    #quickFilters.productivity-pipeline{display:block}
+    .productivity-actions{display:flex;flex-wrap:wrap;gap:10px}
+    .productivity-client-picker{display:flex;flex-wrap:wrap;gap:8px;width:100%;margin-top:10px;padding:12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface)}
+    .productivity-client-picker[hidden]{display:none}
+    .productivity-client-picker-title{width:100%;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+    .quick-filter.active{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 0 1px rgba(0,212,255,.2)}
+  `;
+  document.head.appendChild(style);
+
+  function postDate(value){
+    if(!value) return null;
+    const parts=String(value).split('-').map(Number);
+    return parts.length===3?new Date(parts[0],parts[1]-1,parts[2]):null;
+  }
+  function inVisiblePeriod(value){
+    const date=value instanceof Date?value:new Date(value);
+    if(!date||Number.isNaN(date.getTime())) return false;
+    if(calendarView==='month') return date.getFullYear()===calendarDate.getFullYear()&&date.getMonth()===calendarDate.getMonth();
+    if(calendarView==='week'){
+      const start=startOfWeek(calendarDate),end=new Date(start);
+      end.setDate(end.getDate()+7);
+      return date>=start&&date<end;
+    }
+    return date.getFullYear()===calendarDate.getFullYear()&&date.getMonth()===calendarDate.getMonth()&&date.getDate()===calendarDate.getDate();
+  }
+  function selectedStageMatches(card){
+    if(!selectedStatuses.size) return true;
+    const stage=String(card.stage||(card.is_draft?'criar':'')).toLowerCase();
+    return [...selectedStatuses].some(status=>status.toLowerCase()===stage);
+  }
+  function selectedClientMatches(clientId){
+    return !selectedClients.size||selectedClients.has(clientId||'');
+  }
+
+  window.renderQuickFilters=function(){
+    const container=document.getElementById('quickFilters');
+    if(state.view!=='Painel'){container.classList.add('hidden');return;}
+    container.classList.remove('hidden');
+    container.classList.add('productivity-pipeline');
+    const allActive=!selectedStatuses.size&&!selectedClients.size;
+    const clientLabel=selectedClients.size?`Clientes (${selectedClients.size})`:'Clientes';
+    container.innerHTML=`
+      <div class="productivity-actions">
+        <button class="quick-filter ${selectedClients.size?'active':''}" type="button" aria-expanded="${clientPickerOpen}" onclick="toggleProductivityClients()">${clientLabel}</button>
+        ${productivityStatuses.map(status=>`<button class="quick-filter ${selectedStatuses.has(status)?'active':''}" type="button" aria-pressed="${selectedStatuses.has(status)}" onclick="toggleProductivityStatus('${status}')">${status}</button>`).join('')}
+        <button class="quick-filter ${allActive?'active':''}" type="button" onclick="resetProductivitySelection()">Todos</button>
+      </div>
+      <div class="productivity-client-picker" ${clientPickerOpen?'':'hidden'}>
+        <div class="productivity-client-picker-title">Selecione um ou mais clientes</div>
+        ${getClients().map(client=>`<button class="quick-filter ${selectedClients.has(client.id)?'active':''}" type="button" aria-pressed="${selectedClients.has(client.id)}" onclick="toggleProductivityClient('${client.id}')">${escapeHtml(client.name)}</button>`).join('')||'<span>Nenhum cliente cadastrado.</span>'}
+      </div>`;
+  };
+  window.toggleProductivityClients=function(){clientPickerOpen=!clientPickerOpen;renderQuickFilters();};
+  window.toggleProductivityStatus=function(status){
+    if(selectedStatuses.has(status)) selectedStatuses.delete(status); else selectedStatuses.add(status);
+    renderMainContent();renderCustomCards();
+  };
+  window.toggleProductivityClient=function(id){
+    if(selectedClients.has(id)) selectedClients.delete(id); else selectedClients.add(id);
+    renderMainContent();renderCustomCards();
+  };
+  window.resetProductivitySelection=function(){
+    selectedStatuses.clear();selectedClients.clear();clientPickerOpen=false;
+    state.status='';state.clientId='';
+    const status=document.getElementById('filterStatus'),client=document.getElementById('filterClient');
+    if(status)status.value='';if(client)client.value='';
+    renderMainContent();renderCustomCards();
+  };
+  window.setQuickStatus=window.toggleProductivityStatus;
+
+  window.filteredPosts=function(){
+    const clients=getClients(),search=state.search.toLowerCase();
+    let posts=getPosts();
+    if(state.view==='Painel'){
+      if(selectedStatuses.size) posts=posts.filter(post=>selectedStatuses.has(post.status));
+      if(selectedClients.size) posts=posts.filter(post=>selectedClients.has(post.clientId));
+      posts=posts.filter(post=>inVisiblePeriod(postDate(post.date)));
+    }else if(state.status) posts=posts.filter(post=>post.status===state.status);
+    if(state.view==='Painel'&&state.status) posts=posts.filter(post=>post.status===state.status);
+    if(state.clientId) posts=posts.filter(post=>post.clientId===state.clientId);
+    if(state.month) posts=posts.filter(post=>post.date&&Number(post.date.slice(5,7))===Number(state.month));
+    if(state.year) posts=posts.filter(post=>post.date&&Number(post.date.slice(0,4))===Number(state.year));
+    if(search) posts=posts.filter(post=>{
+      const client=clients.find(item=>item.id===post.clientId);
+      return [post.title,post.notes,post.legenda,post.type,client?.name].some(value=>String(value||'').toLowerCase().includes(search));
+    });
+    return posts.sort((a,b)=>{
+      if(selectedStatuses.size===1&&selectedStatuses.has('Programado')) return `${a.date||'9999'}${a.hora||'99:99'}`.localeCompare(`${b.date||'9999'}${b.hora||'99:99'}`);
+      if(selectedStatuses.size===1&&selectedStatuses.has('Publicado')) return `${b.date||''}${b.hora||''}`.localeCompare(`${a.date||''}${a.hora||''}`);
+      return Number(b.updatedAt||0)-Number(a.updatedAt||0);
+    });
+  };
+
+  window.calendarPosts=function(){
+    let posts=getPosts().filter(post=>post.date);
+    if(state.view==='Programado') posts=posts.filter(post=>post.status==='Programado');
+    else{
+      if(state.status) posts=posts.filter(post=>post.status===state.status);
+      if(state.view==='Painel'&&selectedStatuses.size) posts=posts.filter(post=>selectedStatuses.has(post.status));
+    }
+    if(state.clientId) posts=posts.filter(post=>post.clientId===state.clientId);
+    if(state.view==='Painel'&&selectedClients.size) posts=posts.filter(post=>selectedClients.has(post.clientId));
+    return posts;
+  };
+
+  const previousRenderPosts=window.renderPosts;
+  window.renderPosts=function(){
+    previousRenderPosts();
+    if(state.view==='Painel'){
+      const heading=document.getElementById('postsHeading');
+      if(heading) heading.textContent='Esteira de Produtividade';
+    }
+  };
+
+  const previousRenderCustomCards=window.renderCustomCards;
+  window.renderCustomCards=function(){
+    if(state.view!=='Painel') return previousRenderCustomCards();
+    const section=document.getElementById('customCardsSection');
+    section.classList.remove('hidden');
+    let cards=cloudCards.filter(card=>inVisiblePeriod(card.created_at));
+    cards=cards.filter(selectedStageMatches).filter(card=>selectedClientMatches(card.client_id));
+    if(state.status) cards=cards.filter(card=>String(card.stage||'').toLowerCase()===state.status.toLowerCase());
+    if(state.clientId) cards=cards.filter(card=>card.client_id===state.clientId);
+    if(state.search){
+      const query=state.search.toLowerCase();
+      cards=cards.filter(card=>[card.title,card.observations,getCardClient(card)?.name].some(value=>String(value||'').toLowerCase().includes(query)));
+    }
+    document.getElementById('customCardsHeading').textContent='Cards';
+    document.getElementById('customCardsGrid').innerHTML=cards.length?cards.map(renderCardSummary).join(''):'<div class="empty-state"><strong>Nenhum card encontrado neste período</strong></div>';
+  };
+
+  const previousSetCalendarView=window.setCalendarView;
+  window.setCalendarView=function(view){previousSetCalendarView(view);renderPosts();renderCustomCards();};
+  const previousChangeCalendar=window.changeCalendar;
+  window.changeCalendar=function(direction){previousChangeCalendar(direction);renderCustomCards();};
+  const previousApplyFilters=window.applyFilters;
+  window.applyFilters=function(){previousApplyFilters();renderCustomCards();};
+  const previousClearFilters=window.clearFilters;
+  window.clearFilters=function(){previousClearFilters();renderCustomCards();};
+})();</script>
+</body>
 </html>
