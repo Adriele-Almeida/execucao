@@ -191,9 +191,14 @@
     .profile-contact-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
     .profile-contact-actions .btn[disabled] { cursor:not-allowed; opacity:.42; }
     .client-instagram-link{display:inline-flex;align-items:center;gap:6px;margin-top:5px;color:var(--cyan);font-weight:700}.client-instagram-link svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2}.client-detail-links{display:flex;gap:9px;flex-wrap:wrap;margin:12px 0}.client-detail-info{padding:14px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);margin:12px 0}.client-detail-info h4{margin-bottom:7px}.custom-field-card .caption-copy{position:static;align-self:flex-end;margin-top:8px}.card-text-wrap{display:flex;flex-direction:column;gap:8px}.card-text-wrap textarea{min-height:120px;scrollbar-width:thin;scrollbar-color:var(--cyan) var(--surface-2)}.card-text-wrap textarea::-webkit-scrollbar{width:8px}.card-text-wrap textarea::-webkit-scrollbar-track{background:var(--surface-2);border-radius:8px}.card-text-wrap textarea::-webkit-scrollbar-thumb{background:var(--cyan);border-radius:8px}.card-assignment-control{font-weight:700;color:var(--muted)}
+    .productivity-client-picker { display:flex; flex-wrap:wrap; gap:7px; margin:-5px 0 14px; padding:12px; border:1px solid var(--border); border-radius:10px; background:var(--surface-2); }
+    .productivity-client-picker[hidden] { display:none !important; }
+    .summary-action.has-new-order { border-color:var(--cyan); box-shadow:0 0 18px rgba(0,212,255,.22), inset 3px 0 0 var(--cyan); }
+    .summary-order-count { display:inline-flex; align-items:center; justify-content:center; min-width:22px; height:22px; margin-left:auto; padding:0 6px; border-radius:11px; background:var(--cyan); color:#071014; font-size:12px; font-weight:800; }
+    .status-concluido { color:var(--green); border-color:var(--green); }
     .hidden { display:none !important; }
     .auth-screen.auth-checking { visibility:hidden; pointer-events:none; }
-    body.app-starting > header, body.app-starting > .app-shell { visibility:hidden; }
+    body.app-starting > header, body.app-starting > .app-shell, body.app-starting > .auth-screen { visibility:hidden !important; }
 
     @media (max-width:1050px) {
       .filter-panel { grid-template-columns:repeat(3,1fr); }
@@ -467,7 +472,7 @@
           <label for="filterStatus">Status</label>
           <select class="control" id="filterStatus" onchange="applyFilters()">
             <option value="">Todos os status</option>
-            <option>Criar</option><option>Conferir</option><option>Refinar</option><option>Pronto</option><option>Programar</option><option>Programado</option><option>Publicado</option>
+            <option>Criar</option><option>Conferir</option><option>Refinar</option><option>Pronto</option><option>Programar</option><option>Programado</option><option>Publicado</option><option>Concluído</option>
           </select>
         </div>
         <div class="field" id="filterClientField">
@@ -521,6 +526,7 @@
       <section class="section" id="postsSection">
         <div class="section-heading"><h3 id="postsHeading">Postagens</h3><span id="postsCount"></span></div>
         <div class="quick-filters hidden" id="quickFilters"></div>
+        <div class="productivity-client-picker" id="productivityClientPicker" hidden></div>
         <div class="table-wrap">
           <table>
             <thead><tr><th>Data</th><th>Cliente</th><th>Tema</th><th>Tipo</th><th>Status</th><th>Arte</th></tr></thead>
@@ -696,7 +702,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    const STATUSES = ['Criar','Conferir','Refinar','Pronto','Programar','Programado','Publicado'];
+    const STATUSES = ['Criar','Conferir','Refinar','Pronto','Programar','Programado','Publicado','Concluído'];
     const NAV_ITEMS = ['Painel','Ordem de Execução','Todos','Clientes',...STATUSES,'Configurações'];
     const COLORS = ['#00d4ff','#f0b429','#00e676','#ff4d67','#a29bfe','#ff9f43','#fd79a8','#55efc4','#74b9ff'];
     const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -713,10 +719,11 @@
       'Programar':'Conteúdos em preparação para agendamento.',
       'Programado':'Postagens com data e horário definidos.',
       'Publicado':'Histórico das postagens realizadas.',
+      'Concluído':'Tarefas e conteúdos concluídos.',
       'Configurações':'Backup e operações protegidas do aplicativo.'
     };
 
-    let state = { view:'Painel', clientId:'', status:'', month:'', year:'', search:'', filtersOpen:false };
+    let state = { view:'Painel', clientId:'', status:'', month:'', year:'', search:'', filtersOpen:false, quickStatuses:[], quickClients:[], quickClientsOpen:false };
     let editingPostId = null;
     let editingClientId = null;
     let selectedColor = '';
@@ -839,8 +846,14 @@
       const clients=getClients();
       const search=state.search.toLowerCase();
       let posts=getPosts();
-      if(state.status) posts=posts.filter(post=>post.status===state.status);
-      if(state.clientId) posts=posts.filter(post=>post.clientId===state.clientId);
+      if(state.view==='Painel') {
+        if(state.quickStatuses.length) posts=posts.filter(post=>state.quickStatuses.includes(post.status));
+        if(state.quickClients.length) posts=posts.filter(post=>state.quickClients.includes(post.clientId));
+        posts=posts.filter(post=>post.date && isInVisibleCalendarPeriod(post.date));
+      } else {
+        if(state.status) posts=posts.filter(post=>post.status===state.status);
+        if(state.clientId) posts=posts.filter(post=>post.clientId===state.clientId);
+      }
       if(state.month) posts=posts.filter(post=>post.date && Number(post.date.slice(5,7))===Number(state.month));
       if(state.year) posts=posts.filter(post=>post.date && Number(post.date.slice(0,4))===Number(state.year));
       if(search) posts=posts.filter(post=>{
@@ -848,8 +861,10 @@
         return [post.title,post.notes,post.legenda,post.type,client?.name].some(value=>String(value||'').toLowerCase().includes(search));
       });
       return posts.sort((a,b)=>{
-        if(state.status==='Programado') return `${a.date||'9999'}${a.hora||'99:99'}`.localeCompare(`${b.date||'9999'}${b.hora||'99:99'}`);
-        if(state.status==='Publicado') return `${b.date||''}${b.hora||''}`.localeCompare(`${a.date||''}${a.hora||''}`);
+        const onlyProgrammed=state.view==='Programado'||(state.view==='Painel'&&state.quickStatuses.length===1&&state.quickStatuses[0]==='Programado');
+        const onlyPublished=state.view==='Publicado'||(state.view==='Painel'&&state.quickStatuses.length===1&&state.quickStatuses[0]==='Publicado');
+        if(onlyProgrammed) return `${a.date||'9999'}${a.hora||'99:99'}`.localeCompare(`${b.date||'9999'}${b.hora||'99:99'}`);
+        if(onlyPublished) return `${b.date||''}${b.hora||''}`.localeCompare(`${a.date||''}${a.hora||''}`);
         return Number(b.updatedAt||b.id||0)-Number(a.updatedAt||a.id||0);
       });
     }
@@ -873,8 +888,9 @@
     function renderSummary() {
       const section=document.getElementById('summaryGrid');
       if(state.view!=='Painel') { section.classList.add('hidden'); return; }
+      const orderCount=unreadCardNotifications().filter(item=>item.notification_type==='demanda').length;
       section.classList.remove('hidden');
-      section.innerHTML=`<button class="summary-card summary-action" type="button" onclick="openView('Ordem de Execução')"><span class="summary-name">Ordem de Execução</span></button>`;
+      section.innerHTML=`<button class="summary-card summary-action ${orderCount?'has-new-order':''}" type="button" onclick="openView('Ordem de Execução')"><span class="summary-name">Ordem de Execução</span>${orderCount?`<span class="summary-order-count">${Math.min(orderCount,99)}</span>`:''}</button>`;
     }
 
     function renderClients() {
@@ -896,7 +912,7 @@
       if(state.view==='Clientes'||state.view==='Configurações'||state.view==='Ordem de Execução') { section.classList.add('hidden'); return; }
       section.classList.remove('hidden');
       const posts=filteredPosts(), clients=getClients();
-      document.getElementById('postsHeading').textContent=state.view==='Painel'||state.view==='Todos'?'Postagens':(state.status||'Postagens');
+      document.getElementById('postsHeading').textContent=state.view==='Painel'?'Esteira de Produtividade':(state.view==='Todos'?'Postagens':(state.status||'Postagens'));
       renderQuickFilters();
       document.getElementById('postsCount').textContent=`${posts.length} registro${posts.length===1?'':'s'}`;
       const body=document.getElementById('postsBody'), empty=document.getElementById('postsEmpty');
@@ -912,16 +928,56 @@
 
     function renderQuickFilters() {
       const container=document.getElementById('quickFilters');
-      if(state.view!=='Painel') { container.classList.add('hidden'); return; }
+      const clientPicker=document.getElementById('productivityClientPicker');
+      if(state.view!=='Painel') {
+        container.classList.add('hidden');
+        clientPicker.hidden=true;
+        return;
+      }
       container.classList.remove('hidden');
-      const options=[['','Todos'],['Publicado','Publicado'],['Programado','Programado'],['Conferir','Conferir'],['Refinar','Refinar'],['Criar','Criar']];
-      container.innerHTML=options.map(([value,label])=>`<button class="quick-filter ${state.status===value?'active':''}" type="button" onclick="setQuickStatus('${value}')">${label}</button>`).join('');
+      const statusOptions=['Criar','Conferir','Refinar','Pronto','Programar','Programado','Publicado','Concluído'];
+      const nothingSelected=!state.quickStatuses.length&&!state.quickClients.length;
+      container.innerHTML=[
+        `<button class="quick-filter ${state.quickClients.length||state.quickClientsOpen?'active':''}" type="button" onclick="toggleProductivityClients()">Clientes${state.quickClients.length?` (${state.quickClients.length})`:''}</button>`,
+        ...statusOptions.map(status=>`<button class="quick-filter ${state.quickStatuses.includes(status)?'active':''}" type="button" onclick="toggleProductivityStatus('${status}')">${status}</button>`),
+        `<button class="quick-filter ${nothingSelected?'active':''}" type="button" onclick="resetProductivitySelection()">Todos</button>`
+      ].join('');
+      const clients=getClients();
+      clientPicker.hidden=!state.quickClientsOpen;
+      clientPicker.innerHTML=clients.length
+        ? clients.map(client=>`<button class="quick-filter ${state.quickClients.includes(client.id)?'active':''}" type="button" onclick="toggleProductivityClient('${client.id}')">${escapeHtml(client.name)}</button>`).join('')
+        : '<span class="muted">Nenhum cliente cadastrado.</span>';
+    }
+
+    function toggleProductivityClients() {
+      state.quickClientsOpen=!state.quickClientsOpen;
+      renderQuickFilters();
+    }
+
+    function toggleProductivityStatus(status) {
+      state.quickStatuses=state.quickStatuses.includes(status)
+        ? state.quickStatuses.filter(item=>item!==status)
+        : [...state.quickStatuses,status];
+      renderMainContent();
+    }
+
+    function toggleProductivityClient(clientId) {
+      state.quickClients=state.quickClients.includes(clientId)
+        ? state.quickClients.filter(item=>item!==clientId)
+        : [...state.quickClients,clientId];
+      renderMainContent();
+    }
+
+    function resetProductivitySelection() {
+      state.quickStatuses=[];
+      state.quickClients=[];
+      state.quickClientsOpen=false;
+      renderMainContent();
     }
 
     function setQuickStatus(status) {
-      state.status=status;
-      document.getElementById('filterStatus').value=status;
-      renderMainContent();
+      if(!status) resetProductivitySelection();
+      else toggleProductivityStatus(status);
     }
 
     let selectedManagedCardIds = new Set();
@@ -950,7 +1006,7 @@
     }
 
     function renderMainContent() {
-      renderPageHeader(); renderSummary(); renderClients(); renderPosts(); renderOrderExecution(); renderSettings(); renderCalendarSection();
+      renderPageHeader(); renderSummary(); renderClients(); renderPosts(); renderCustomCards(); renderOrderExecution(); renderSettings(); renderCalendarSection();
     }
 
     function render() {
@@ -962,7 +1018,7 @@
     function setCalendarView(view) {
       calendarView=view;
       document.querySelectorAll('[data-calendar-view]').forEach(button=>button.classList.toggle('active',button.dataset.calendarView===view));
-      renderCalendar();
+      renderCalendar(); renderPosts(); renderCustomCards();
     }
 
     function changeCalendar(direction) {
@@ -970,7 +1026,7 @@
       else if(calendarView==='week') calendarDate=new Date(calendarDate.getFullYear(),calendarDate.getMonth(),calendarDate.getDate()+direction*7);
       else calendarDate=new Date(calendarDate.getFullYear(),calendarDate.getMonth(),calendarDate.getDate()+direction);
       state.month=String(calendarDate.getMonth()+1); state.year=String(calendarDate.getFullYear());
-      populateFilterOptions(); renderCalendar(); renderPosts();
+      populateFilterOptions(); renderCalendar(); renderPosts(); renderCustomCards();
     }
 
     function renderCalendarSection() {
@@ -982,11 +1038,25 @@
       renderCalendar();
     }
 
+    function isInVisibleCalendarPeriod(value) {
+      if(!value) return false;
+      const date=String(value).includes('T')?new Date(value):new Date(`${value}T00:00:00`);
+      if(Number.isNaN(date.getTime())) return false;
+      if(calendarView==='month') return date.getFullYear()===calendarDate.getFullYear()&&date.getMonth()===calendarDate.getMonth();
+      if(calendarView==='day') return dateKey(date)===dateKey(calendarDate);
+      const start=new Date(calendarDate); start.setHours(0,0,0,0); start.setDate(start.getDate()-start.getDay());
+      const end=new Date(start); end.setDate(end.getDate()+7);
+      return date>=start&&date<end;
+    }
+
     function calendarPosts() {
       let posts=getPosts().filter(post=>post.date);
       if(state.view==='Programado') posts=posts.filter(post=>post.status==='Programado');
-      else if(state.status) posts=posts.filter(post=>post.status===state.status);
-      if(state.clientId) posts=posts.filter(post=>post.clientId===state.clientId);
+      else if(state.view==='Painel') {
+        if(state.quickStatuses.length) posts=posts.filter(post=>state.quickStatuses.includes(post.status));
+        if(state.quickClients.length) posts=posts.filter(post=>state.quickClients.includes(post.clientId));
+      } else if(state.status) posts=posts.filter(post=>post.status===state.status);
+      if(state.view!=='Painel'&&state.clientId) posts=posts.filter(post=>post.clientId===state.clientId);
       return posts;
     }
 
@@ -1481,7 +1551,10 @@
       currentProfile=profile;
       try {
         state.view='Painel';
-        filtersOpen=false;
+        state.filtersOpen=false;
+        state.quickStatuses=[];
+        state.quickClients=[];
+        state.quickClientsOpen=false;
         await loadCloudData();
         await migrateLocalData();
         await loadCloudData();
@@ -1506,7 +1579,7 @@
       return appInitializationPromise;
     }
 
-    function subscribeToChanges() {
+        function subscribeToChanges() {
       if(realtimeChannel) supabaseClient.removeChannel(realtimeChannel);
       realtimeChannel=supabaseClient.channel('ordem-execucao-atualizacoes')
         .on('postgres_changes',{event:'*',schema:'public',table:'clients'},refreshFromRealtime)
@@ -1734,18 +1807,39 @@
       return `<button class="custom-card" type="button" style="border-left-color:${escapeHtml(color)}" onclick="openCardDetail('${card.id}')"><h4>${escapeHtml(card.title||'Sem título')}</h4><div class="card-client-name" style="color:${escapeHtml(color)}">${escapeHtml(client?.name||'Sem cliente vinculado')}</div><time>Registrado em ${new Date(card.created_at).toLocaleString('pt-BR')}</time><div class="card-meta">${card.is_draft?'<span class="badge">Rascunho</span>':''}${card.stage?`<span class="badge">${stageLabel(card.stage)}</span>`:''}${responsible?`<span class="badge">${escapeHtml(responsible.display_name||responsible.email)}</span>`:''}</div></button>`;
     }
     function renderCustomCards() {
-      const section=document.getElementById('customCardsSection'), inClient=state.view==='Todos'&&Boolean(state.clientId), cardStage=String(state.view||'').toLowerCase(), isWorkflowStage=STATUSES.map(status=>status.toLowerCase()).includes(cardStage);
-      if(!isWorkflowStage&&!inClient) { section.classList.add('hidden'); return; }
-      section.classList.remove('hidden'); document.getElementById('customCardsHeading').textContent=inClient?'Cards do cliente':`Cards — ${stageLabel(cardStage)}`;
-      const grid=document.getElementById('customCardsGrid'), cards=inClient?cloudCards.filter(card=>card.client_id===state.clientId):cloudCards.filter(card=>card.stage===cardStage||(cardStage==='criar'&&card.is_draft&&card.created_by===currentProfile?.id));
-      grid.innerHTML=cards.length?cards.map(renderCardSummary).join(''):`<div class="empty-state"><strong>Nenhum card em ${stageLabel(cardStage)}</strong><span>Use “Novo card” para registrar um item.</span></div>`;
+      const section=document.getElementById('customCardsSection');
+      const inPanel=state.view==='Painel';
+      const inClient=state.view==='Todos'&&Boolean(state.clientId);
+      const cardStage=String(state.view||'').toLowerCase();
+      const isWorkflowStage=STATUSES.map(status=>status.toLowerCase()).includes(cardStage);
+      if(inPanel&&!state.quickStatuses.length) { section.classList.add('hidden'); return; }
+      if(!inPanel&&!isWorkflowStage&&!inClient) { section.classList.add('hidden'); return; }
+
+      let cards=cloudCards.slice();
+      if(inPanel) {
+        const selectedStages=state.quickStatuses.map(status=>status.toLowerCase());
+        cards=cards.filter(card=>selectedStages.includes(card.stage));
+        if(state.quickClients.length) cards=cards.filter(card=>state.quickClients.includes(card.client_id));
+        cards=cards.filter(card=>isInVisibleCalendarPeriod(card.created_at));
+        document.getElementById('customCardsHeading').textContent='Cards';
+      } else if(inClient) {
+        cards=cards.filter(card=>card.client_id===state.clientId);
+        document.getElementById('customCardsHeading').textContent='Cards do cliente';
+      } else {
+        cards=cards.filter(card=>card.stage===cardStage||(cardStage==='criar'&&card.is_draft&&card.created_by===currentProfile?.id));
+        document.getElementById('customCardsHeading').textContent=`Cards — ${stageLabel(cardStage)}`;
+      }
+      cards.sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
+      section.classList.remove('hidden');
+      const grid=document.getElementById('customCardsGrid');
+      grid.innerHTML=cards.length?cards.map(renderCardSummary).join(''):`<div class="empty-state"><strong>Nenhum card encontrado</strong><span>Não há cards com estas seleções no período exibido.</span></div>`;
     }
     function cardFieldsHtml(card) { return (card.fields||[]).map(field=>{ if(field.type==='link') { const url=safeUrl(field.value); return url?`<p><a href="${url}" target="_blank" rel="noopener">Abrir link</a></p>`:''; } if(field.type==='date') { const value=splitCardDateValue(field.value); return value.date?`<p>${formatDate(value.date)}${value.time?` · ${escapeHtml(value.time)}`:''}</p>`:''; } return `<p>${escapeHtml(field.value)}</p>`; }).join(''); }
     function openCardDetail(cardId) {
       const card=cloudCards.find(item=>item.id===cardId); if(!card) return;
       const client=getCardClient(card),owner=cardOwner(card),responsible=cloudProfiles.find(person=>person.id===card.responsible_id),color=client?.color||'var(--cyan)',updates=cloudCardUpdates.filter(item=>item.card_id===card.id),canEdit=canEditCardOrientation(card);
       document.getElementById('cardDetailTitle').textContent=card.title||'Card';
-      document.getElementById('cardDetailContent').innerHTML=`<div class="card-client-name" style="color:${escapeHtml(color)}">${escapeHtml(client?.name||'Sem cliente vinculado')}</div><p style="margin-top:8px;color:var(--muted)">Criado por ${escapeHtml(owner?.display_name||owner?.email||'Usuária removida')} em ${new Date(card.created_at).toLocaleString('pt-BR')}</p><div class="card-detail-section"><h4>Observação</h4>${card.observations?`<p>${escapeHtml(card.observations)}</p>`:''}${cardFieldsHtml(card)}${canEdit?`<button class="btn btn-ghost btn-small" type="button" onclick="closeModal('cardDetailModal');openCustomCardModal('', '${card.id}')">Editar orientação</button>`:''}</div><div class="card-detail-section"><h4>Andamento</h4><div class="form-grid"><div class="field form-group"><label for="cardStageAction">Status</label><select class="control" id="cardStageAction"><option value=""></option><option value="criar">Criar</option><option value="conferir">Conferir</option><option value="refinar">Refinar</option><option value="pronto">Pronto</option><option value="programar">Programar</option><option value="programado">Programado</option><option value="publicado">Publicado</option><option value="concluido">Concluído</option></select></div><div class="field form-group"><label>Responsável</label><div class="control" style="display:flex;align-items:center">${escapeHtml(responsible?.display_name||responsible?.email||'Sem responsável')}</div></div><div class="field form-group full"><label for="cardProgressText">Registrar execução ou observação</label><textarea class="control" id="cardProgressText"></textarea></div></div><div class="modal-actions"><button class="btn btn-ghost" type="button" onclick="closeModal('cardDetailModal')">Fechar</button><button class="btn btn-primary" type="button" onclick="saveCardProgress('${card.id}')">Registrar atualização</button></div></div><div class="card-detail-section"><h4>Histórico do card</h4><div class="card-history">${updates.length?updates.map(update=>`<div class="card-history-item"><strong>${escapeHtml(update.author?.display_name||update.author?.email||'Usuária')}</strong> ${update.action_type==='mudanca_de_etapa'?`moveu de ${stageLabel(update.from_stage)} para ${stageLabel(update.to_stage)}`:(update.action_type==='execucao'?'registrou uma execução':'adicionou uma observação')}${update.content?`<p>${escapeHtml(update.content)}</p>`:''}<time>${new Date(update.created_at).toLocaleString('pt-BR')}</time></div>`).join(''):'<p>Nenhuma atualização registrada.</p>'}</div></div>`;
+      document.getElementById('cardDetailContent').innerHTML=`<div class="card-client-name" style="color:${escapeHtml(color)}">${escapeHtml(client?.name||'Sem cliente vinculado')}</div><p style="margin-top:8px;color:var(--muted)">Criado por ${escapeHtml(owner?.display_name||owner?.email||'Usuária removida')} em ${new Date(card.created_at).toLocaleString('pt-BR')}</p><div class="card-detail-section"><h4>Observação</h4>${card.observations?`<p>${escapeHtml(card.observations)}</p>`:''}${cardFieldsHtml(card)}${canEdit?`<button class="btn btn-ghost btn-small" type="button" onclick="closeModal('cardDetailModal');openCustomCardModal('', '${card.id}')">Editar orientação</button>`:''}</div><div class="card-detail-section"><h4>Andamento</h4><div class="form-grid"><div class="field form-group"><label for="cardStageAction">Status</label><select class="control" id="cardStageAction"><option value=""></option><option value="criar">Criar</option><option value="conferir">Conferir</option><option value="refinar">Refinar</option><option value="programado">Programado</option><option value="publicado">Publicado</option><option value="concluido">Concluído</option></select></div><div class="field form-group"><label>Responsável</label><div class="control" style="display:flex;align-items:center">${escapeHtml(responsible?.display_name||responsible?.email||'Sem responsável')}</div></div><div class="field form-group full"><label for="cardProgressText">Registrar execução ou observação</label><textarea class="control" id="cardProgressText"></textarea></div></div><div class="modal-actions"><button class="btn btn-ghost" type="button" onclick="closeModal('cardDetailModal')">Fechar</button><button class="btn btn-primary" type="button" onclick="saveCardProgress('${card.id}')">Registrar atualização</button></div></div><div class="card-detail-section"><h4>Histórico do card</h4><div class="card-history">${updates.length?updates.map(update=>`<div class="card-history-item"><strong>${escapeHtml(update.author?.display_name||update.author?.email||'Usuária')}</strong> ${update.action_type==='mudanca_de_etapa'?`moveu de ${stageLabel(update.from_stage)} para ${stageLabel(update.to_stage)}`:(update.action_type==='execucao'?'registrou uma execução':'adicionou uma observação')}${update.content?`<p>${escapeHtml(update.content)}</p>`:''}<time>${new Date(update.created_at).toLocaleString('pt-BR')}</time></div>`).join(''):'<p>Nenhuma atualização registrada.</p>'}</div></div>`;
       document.getElementById('cardStageAction').value=card.stage||'criar'; document.getElementById('cardDetailModal').classList.add('open');
     }
     async function saveCardProgress(cardId) {
@@ -1887,161 +1981,5 @@ function profileValues(){const b={display_name:document.getElementById('profileD
 document.getElementById('customCardModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeCustomCardToDraft();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('customCardModal').classList.contains('open')){e.preventDefault();closeCustomCardToDraft();}});
 document.addEventListener('click',e=>{const i=e.target.closest('input.native-picker,input[type="date"],input[type="time"]');if(i&&typeof i.showPicker==='function'){try{i.showPicker();}catch(_){}}});
-</script><script id="productivity-pipeline-script">(function phase1Installer(){
-  const productivityStatuses=['Criar','Conferir','Refinar','Pronto','Programar','Programado','Publicado','Concluído'];
-  STATUSES.splice(0,STATUSES.length,...productivityStatuses);
-  NAV_ITEMS.splice(0,NAV_ITEMS.length,'Painel','Ordem de Execução','Clientes',...productivityStatuses,'Configurações','Todos');
-  VIEW_TEXT['Concluído']='Atividades e conteúdos concluídos.';
-  const filterStatusSelect=document.getElementById('filterStatus');
-  if(filterStatusSelect&&!filterStatusSelect.querySelector('option[value=\"Concluído\"]')) filterStatusSelect.insertAdjacentHTML('beforeend','<option value=\"Concluído\">Concluído</option>');
-  let selectedStatuses=new Set();
-  let selectedClients=new Set();
-  let clientPickerOpen=false;
-
-  const style=document.createElement('style');
-  style.textContent=`
-    #quickFilters.productivity-pipeline{display:block}
-    .productivity-actions{display:flex;flex-wrap:wrap;gap:10px}
-    .productivity-client-picker{display:flex;flex-wrap:wrap;gap:8px;width:100%;margin-top:10px;padding:12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface)}
-    .productivity-client-picker[hidden]{display:none}
-    .productivity-client-picker-title{width:100%;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}
-    .quick-filter.active{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 0 1px rgba(0,212,255,.2)}
-    .status-pronto,.status-programar{color:var(--cyan);border-color:var(--cyan)}
-    .status-concluido{color:var(--green);border-color:var(--green)}
-  `;
-  document.head.appendChild(style);
-
-  function postDate(value){
-    if(!value) return null;
-    const parts=String(value).split('-').map(Number);
-    return parts.length===3?new Date(parts[0],parts[1]-1,parts[2]):null;
-  }
-  function inVisiblePeriod(value){
-    const date=value instanceof Date?value:new Date(value);
-    if(!date||Number.isNaN(date.getTime())) return false;
-    if(calendarView==='month') return date.getFullYear()===calendarDate.getFullYear()&&date.getMonth()===calendarDate.getMonth();
-    if(calendarView==='week'){
-      const start=startOfWeek(calendarDate),end=new Date(start);
-      end.setDate(end.getDate()+7);
-      return date>=start&&date<end;
-    }
-    return date.getFullYear()===calendarDate.getFullYear()&&date.getMonth()===calendarDate.getMonth()&&date.getDate()===calendarDate.getDate();
-  }
-  function selectedStageMatches(card){
-    if(!selectedStatuses.size) return true;
-    const stage=String(card.stage||(card.is_draft?'criar':'')).toLowerCase();
-    return [...selectedStatuses].some(status=>status.toLowerCase()===stage);
-  }
-  function selectedClientMatches(clientId){
-    return !selectedClients.size||selectedClients.has(clientId||'');
-  }
-
-  window.renderQuickFilters=function(){
-    const container=document.getElementById('quickFilters');
-    if(state.view!=='Painel'){container.classList.add('hidden');return;}
-    container.classList.remove('hidden');
-    container.classList.add('productivity-pipeline');
-    const allActive=!selectedStatuses.size&&!selectedClients.size;
-    const clientLabel=selectedClients.size?`Clientes (${selectedClients.size})`:'Clientes';
-    container.innerHTML=`
-      <div class="productivity-actions">
-        <button class="quick-filter ${selectedClients.size?'active':''}" type="button" aria-expanded="${clientPickerOpen}" onclick="toggleProductivityClients()">${clientLabel}</button>
-        ${productivityStatuses.map(status=>`<button class="quick-filter ${selectedStatuses.has(status)?'active':''}" type="button" aria-pressed="${selectedStatuses.has(status)}" onclick="toggleProductivityStatus('${status}')">${status}</button>`).join('')}
-        <button class="quick-filter ${allActive?'active':''}" type="button" onclick="resetProductivitySelection()">Todos</button>
-      </div>
-      <div class="productivity-client-picker" ${clientPickerOpen?'':'hidden'}>
-        <div class="productivity-client-picker-title">Selecione um ou mais clientes</div>
-        ${getClients().map(client=>`<button class="quick-filter ${selectedClients.has(client.id)?'active':''}" type="button" aria-pressed="${selectedClients.has(client.id)}" onclick="toggleProductivityClient('${client.id}')">${escapeHtml(client.name)}</button>`).join('')||'<span>Nenhum cliente cadastrado.</span>'}
-      </div>`;
-  };
-  window.toggleProductivityClients=function(){clientPickerOpen=!clientPickerOpen;renderQuickFilters();};
-  window.toggleProductivityStatus=function(status){
-    if(selectedStatuses.has(status)) selectedStatuses.delete(status); else selectedStatuses.add(status);
-    if(selectedStatuses.size===productivityStatuses.length) selectedStatuses.clear();
-    renderMainContent();renderCustomCards();
-  };
-  window.toggleProductivityClient=function(id){
-    if(selectedClients.has(id)) selectedClients.delete(id); else selectedClients.add(id);
-    renderMainContent();renderCustomCards();
-  };
-  window.resetProductivitySelection=function(){
-    selectedStatuses.clear();selectedClients.clear();clientPickerOpen=false;
-    state.status='';state.clientId='';
-    const status=document.getElementById('filterStatus'),client=document.getElementById('filterClient');
-    if(status)status.value='';if(client)client.value='';
-    renderMainContent();renderCustomCards();
-  };
-  window.setQuickStatus=window.toggleProductivityStatus;
-
-  window.filteredPosts=function(){
-    const clients=getClients(),search=state.search.toLowerCase();
-    let posts=getPosts();
-    if(state.view==='Painel'){
-      if(selectedStatuses.size) posts=posts.filter(post=>selectedStatuses.has(post.status));
-      if(selectedClients.size) posts=posts.filter(post=>selectedClients.has(post.clientId));
-      posts=posts.filter(post=>inVisiblePeriod(postDate(post.date)));
-    }else if(state.status) posts=posts.filter(post=>post.status===state.status);
-    if(state.view==='Painel'&&state.status) posts=posts.filter(post=>post.status===state.status);
-    if(state.clientId) posts=posts.filter(post=>post.clientId===state.clientId);
-    if(state.month) posts=posts.filter(post=>post.date&&Number(post.date.slice(5,7))===Number(state.month));
-    if(state.year) posts=posts.filter(post=>post.date&&Number(post.date.slice(0,4))===Number(state.year));
-    if(search) posts=posts.filter(post=>{
-      const client=clients.find(item=>item.id===post.clientId);
-      return [post.title,post.notes,post.legenda,post.type,client?.name].some(value=>String(value||'').toLowerCase().includes(search));
-    });
-    return posts.sort((a,b)=>{
-      if(selectedStatuses.size===1&&selectedStatuses.has('Programado')) return `${a.date||'9999'}${a.hora||'99:99'}`.localeCompare(`${b.date||'9999'}${b.hora||'99:99'}`);
-      if(selectedStatuses.size===1&&selectedStatuses.has('Publicado')) return `${b.date||''}${b.hora||''}`.localeCompare(`${a.date||''}${a.hora||''}`);
-      return Number(b.updatedAt||0)-Number(a.updatedAt||0);
-    });
-  };
-
-  window.calendarPosts=function(){
-    let posts=getPosts().filter(post=>post.date);
-    if(state.view==='Programado') posts=posts.filter(post=>post.status==='Programado');
-    else{
-      if(state.status) posts=posts.filter(post=>post.status===state.status);
-      if(state.view==='Painel'&&selectedStatuses.size) posts=posts.filter(post=>selectedStatuses.has(post.status));
-    }
-    if(state.clientId) posts=posts.filter(post=>post.clientId===state.clientId);
-    if(state.view==='Painel'&&selectedClients.size) posts=posts.filter(post=>selectedClients.has(post.clientId));
-    return posts;
-  };
-
-  const previousRenderPosts=window.renderPosts;
-  window.renderPosts=function(){
-    previousRenderPosts();
-    if(state.view==='Painel'){
-      const heading=document.getElementById('postsHeading');
-      if(heading) heading.textContent='Esteira de Produtividade';
-    }
-  };
-
-  const previousRenderCustomCards=window.renderCustomCards;
-  window.renderCustomCards=function(){
-    if(state.view!=='Painel') return previousRenderCustomCards();
-    const section=document.getElementById('customCardsSection');
-    section.classList.remove('hidden');
-    let cards=cloudCards.filter(card=>inVisiblePeriod(card.created_at));
-    cards=cards.filter(selectedStageMatches).filter(card=>selectedClientMatches(card.client_id));
-    if(state.status) cards=cards.filter(card=>String(card.stage||'').toLowerCase()===state.status.toLowerCase());
-    if(state.clientId) cards=cards.filter(card=>card.client_id===state.clientId);
-    if(state.search){
-      const query=state.search.toLowerCase();
-      cards=cards.filter(card=>[card.title,card.observations,getCardClient(card)?.name].some(value=>String(value||'').toLowerCase().includes(query)));
-    }
-    document.getElementById('customCardsHeading').textContent='Cards';
-    document.getElementById('customCardsGrid').innerHTML=cards.length?cards.map(renderCardSummary).join(''):'<div class="empty-state"><strong>Nenhum card encontrado neste período</strong></div>';
-  };
-
-  const previousSetCalendarView=window.setCalendarView;
-  window.setCalendarView=function(view){previousSetCalendarView(view);renderPosts();renderCustomCards();};
-  const previousChangeCalendar=window.changeCalendar;
-  window.changeCalendar=function(direction){previousChangeCalendar(direction);renderCustomCards();};
-  const previousApplyFilters=window.applyFilters;
-  window.applyFilters=function(){previousApplyFilters();renderCustomCards();};
-  const previousClearFilters=window.clearFilters;
-  window.clearFilters=function(){previousClearFilters();renderCustomCards();};
-})();</script>
-</body>
+</script></body>
 </html>
