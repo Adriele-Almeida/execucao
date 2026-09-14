@@ -532,7 +532,7 @@
             <thead><tr><th>Data</th><th>Cliente</th><th>Tema</th><th>Tipo</th><th>Status</th><th>Arte</th></tr></thead>
             <tbody id="postsBody"></tbody>
           </table>
-          <div class="empty-state hidden" id="postsEmpty"><strong>Nenhuma postagem encontrada</strong><span>Use a ação desta área para criar um registro.</span></div>
+          <div class="empty-state hidden" id="postsEmpty"><strong>Nenhum item encontrado</strong><span>Não há registros com estas seleções no período exibido.</span></div>
         </div>
       </section>
 
@@ -1818,7 +1818,7 @@
       let cards=cloudCards.slice();
       if(inPanel) {
         const selectedStages=state.quickStatuses.map(status=>status.toLowerCase());
-        cards=cards.filter(card=>selectedStages.includes(card.stage));
+        cards=cards.filter(card=>selectedStages.includes(card.stage)||(selectedStages.includes('criar')&&card.is_draft));
         if(state.quickClients.length) cards=cards.filter(card=>state.quickClients.includes(card.client_id));
         cards=cards.filter(card=>isInVisibleCalendarPeriod(card.created_at));
         document.getElementById('customCardsHeading').textContent='Cards';
