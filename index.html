@@ -193,6 +193,7 @@
     .client-instagram-link{display:inline-flex;align-items:center;gap:6px;margin-top:5px;color:var(--cyan);font-weight:700}.client-instagram-link svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2}.client-detail-links{display:flex;gap:9px;flex-wrap:wrap;margin:12px 0}.client-detail-info{padding:14px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);margin:12px 0}.client-detail-info h4{margin-bottom:7px}.custom-field-card .caption-copy{position:static;align-self:flex-end;margin-top:8px}.card-text-wrap{display:flex;flex-direction:column;gap:8px}.card-text-wrap textarea{min-height:120px;scrollbar-width:thin;scrollbar-color:var(--cyan) var(--surface-2)}.card-text-wrap textarea::-webkit-scrollbar{width:8px}.card-text-wrap textarea::-webkit-scrollbar-track{background:var(--surface-2);border-radius:8px}.card-text-wrap textarea::-webkit-scrollbar-thumb{background:var(--cyan);border-radius:8px}.card-assignment-control{font-weight:700;color:var(--muted)}
     .hidden { display:none !important; }
     .auth-screen.auth-checking { visibility:hidden; pointer-events:none; }
+    body.app-starting > header, body.app-starting > .app-shell { visibility:hidden; }
 
     @media (max-width:1050px) {
       .filter-panel { grid-template-columns:repeat(3,1fr); }
@@ -424,7 +425,7 @@
     .optional-card-toggle{width:auto;min-height:32px;display:inline-flex;align-items:center;gap:8px;padding:6px 11px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--muted);font:700 12px 'Exo 2',sans-serif;letter-spacing:.8px;text-align:left;cursor:pointer}.optional-card-toggle span{font-size:14px;line-height:1}.optional-card-toggle:hover,.optional-card-toggle[aria-expanded="true"]{border-color:var(--cyan);color:var(--cyan)}.card-optional{margin-top:8px}.custom-field-card{display:grid;gap:7px;margin:12px 0;padding:12px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2)}.custom-field-card label{color:var(--faint);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase}.card-text-wrap{position:relative}.card-text-wrap textarea{padding-bottom:44px}.field-remove-link{justify-self:start;padding:4px 0;border:0;background:transparent;color:var(--red);font:600 11px 'Exo 2',sans-serif;cursor:pointer}.cards-management{grid-column:1/-1}.card-management-list{display:grid;gap:8px;max-height:360px;margin:13px 0;overflow:auto}.managed-card{display:flex;gap:10px;align-items:flex-start;padding:11px;border:1px solid var(--border);border-radius:8px;cursor:pointer}.managed-card small{display:block;margin-top:4px;color:var(--muted)}.nav-button{position:relative}.nav-button.has-new-order{border-color:var(--cyan);color:var(--cyan);box-shadow:inset 3px 0 0 var(--cyan)}.nav-order-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;margin-left:7px;border-radius:9px;background:var(--cyan);color:#071014;font-size:11px;font-weight:800}@media(max-width:760px){.custom-date-inputs{grid-template-columns:1fr 1fr}.custom-field-card{padding:10px}.managed-card small{font-size:12px}}
 </style>
 </head>
-<body>
+<body class="app-starting">
   <header>
     <button class="brand" type="button" onclick="openView('Painel')" aria-label="Ir para o painel inicial">
       <h1>ORDEM DE EXECUÇÃO</h1>
@@ -1269,7 +1270,7 @@
       if(signInError) { error.textContent=authErrorMessage(signInError,'login'); return; }
       error.style.color='var(--green)';
       error.textContent='Acesso confirmado. Abrindo o painel...';
-      await initializeApp();
+      await startApp();
     }
 
     function initials(person) {
@@ -1411,40 +1412,98 @@
       return location.hash.includes('type=recovery') || query.has('code');
     }
 
+    let appInitializationPromise=null;
+
+    function finishAppStartup() {
+      document.body.classList.remove('app-starting');
+    }
+
+    async function loadActiveProfileWithRetry(userId) {
+      let lastError=null;
+      for(let attempt=0;attempt<3;attempt++) {
+        const {data,error}=await supabaseClient.from('profiles').select('*').eq('id',userId).maybeSingle();
+        if(!error) return {profile:data,error:null};
+        lastError=error;
+        if(attempt<2) await new Promise(resolve=>setTimeout(resolve,200));
+      }
+      return {profile:null,error:lastError};
+    }
+
     async function initializeApp() {
-      if(!window.supabase || SUPABASE_URL.startsWith('__')) return;
-      if(!supabaseClient) supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
       const authScreen=document.getElementById('authScreen');
+      const authError=document.getElementById('authError');
+      if(!window.supabase || SUPABASE_URL.startsWith('__')) {
+        authError.textContent='Não foi possível conectar o aplicativo.';
+        authScreen.classList.remove('hidden','auth-checking');
+        finishAppStartup();
+        return;
+      }
+      if(!supabaseClient) supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
       const recoveryLink=hasRecoveryLink();
-      const {data:{session}}=await supabaseClient.auth.getSession();
+      const {data:{session},error:sessionError}=await supabaseClient.auth.getSession();
+      if(sessionError) {
+        authError.textContent='Não foi possível recuperar seu acesso. Feche e abra o aplicativo novamente.';
+        authScreen.classList.remove('hidden','auth-checking');
+        finishAppStartup();
+        return;
+      }
       if(recoveryLink) {
         if(!session) {
-          document.getElementById('authError').textContent='Este link de redefinição não é mais válido. Solicite outro link.';
+          authError.textContent='Este link de redefinição não é mais válido. Solicite outro link.';
           authScreen.classList.remove('hidden','auth-checking');
+          finishAppStartup();
           return;
         }
         authScreen.classList.remove('auth-checking');
         showPasswordRecovery();
+        finishAppStartup();
         return;
       }
-      if(!session) { authScreen.classList.remove('hidden','auth-checking'); return; }
-      const {data:profile,error}=await supabaseClient.from('profiles').select('*').eq('id',session.user.id).maybeSingle();
-      if(error || !profile || !profile.active) { await supabaseClient.auth.signOut(); document.getElementById('authError').textContent='Este acesso não está ativo.'; authScreen.classList.remove('hidden','auth-checking'); return; }
+      if(!session) {
+        authScreen.classList.remove('hidden','auth-checking');
+        finishAppStartup();
+        return;
+      }
+      const {profile,error:profileError}=await loadActiveProfileWithRetry(session.user.id);
+      if(profileError) {
+        authError.textContent='Não foi possível carregar seu acesso agora. Feche e abra o aplicativo novamente.';
+        authScreen.classList.remove('hidden','auth-checking');
+        finishAppStartup();
+        return;
+      }
+      if(!profile || !profile.active) {
+        await supabaseClient.auth.signOut();
+        authError.textContent='Este acesso não está ativo.';
+        authScreen.classList.remove('hidden','auth-checking');
+        finishAppStartup();
+        return;
+      }
       currentProfile=profile;
       try {
+        state.view='Painel';
+        filtersOpen=false;
         await loadCloudData();
         await migrateLocalData();
         await loadCloudData();
-        authScreen.classList.add('hidden');
-        authScreen.classList.remove('auth-checking');
         render();
         subscribeToChanges();
         await updateAutomaticStatuses();
+        authScreen.classList.add('hidden');
+        authScreen.classList.remove('auth-checking');
+        finishAppStartup();
       } catch(error) {
         console.error('Falha ao carregar a base operacional:',error);
-        document.getElementById('authError').textContent='Não foi possível abrir o painel. Feche o aplicativo e tente entrar novamente.';
+        authError.textContent='Não foi possível abrir o painel agora. Feche e abra o aplicativo novamente.';
         authScreen.classList.remove('hidden','auth-checking');
+        finishAppStartup();
       }
+    }
+
+    function startApp() {
+      if(!appInitializationPromise) {
+        appInitializationPromise=initializeApp().finally(()=>{ appInitializationPromise=null; });
+      }
+      return appInitializationPromise;
     }
 
     function subscribeToChanges() {
@@ -1755,7 +1814,7 @@
     document.querySelectorAll('.modal-overlay').forEach(overlay=>overlay.addEventListener('click',event=>{ if(event.target===overlay && overlay.id!=='customCardModal') closeModal(overlay.id); }));
     document.addEventListener('click',event=>{ const menu=document.getElementById('accountMenu'), button=document.getElementById('accountButton'); if(menu?.classList.contains('open') && !menu.contains(event.target) && event.target!==button) closeAccountMenu(); });
     document.addEventListener('keydown',event=>{ if(event.key==='Escape') { document.querySelectorAll('.modal-overlay.open').forEach(modal=>{if(modal.id!=='customCardModal')closeModal(modal.id);}); closeAccountMenu(); } });
-    initializeApp(); setInterval(updateAutomaticStatuses,60000); setInterval(updateLiveClock,1000);
+    startApp(); setInterval(updateAutomaticStatuses,60000); setInterval(updateLiveClock,1000);
   </script>
 
 <style id="client-workspace-styles">
