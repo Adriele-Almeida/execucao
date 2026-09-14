@@ -1833,6 +1833,8 @@ document.addEventListener('click',e=>{const i=e.target.closest('input.native-pic
   STATUSES.splice(0,STATUSES.length,...productivityStatuses);
   NAV_ITEMS.splice(0,NAV_ITEMS.length,'Painel','Ordem de Execução','Clientes',...productivityStatuses,'Configurações','Todos');
   VIEW_TEXT['Concluído']='Atividades e conteúdos concluídos.';
+  const filterStatusSelect=document.getElementById('filterStatus');
+  if(filterStatusSelect&&!filterStatusSelect.querySelector('option[value=\"Concluído\"]')) filterStatusSelect.insertAdjacentHTML('beforeend','<option value=\"Concluído\">Concluído</option>');
   let selectedStatuses=new Set();
   let selectedClients=new Set();
   let clientPickerOpen=false;
