@@ -1847,6 +1847,8 @@ document.addEventListener('click',e=>{const i=e.target.closest('input.native-pic
     .productivity-client-picker[hidden]{display:none}
     .productivity-client-picker-title{width:100%;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}
     .quick-filter.active{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 0 1px rgba(0,212,255,.2)}
+    .status-pronto,.status-programar{color:var(--cyan);border-color:var(--cyan)}
+    .status-concluido{color:var(--green);border-color:var(--green)}
   `;
   document.head.appendChild(style);
 
@@ -1896,6 +1898,7 @@ document.addEventListener('click',e=>{const i=e.target.closest('input.native-pic
   window.toggleProductivityClients=function(){clientPickerOpen=!clientPickerOpen;renderQuickFilters();};
   window.toggleProductivityStatus=function(status){
     if(selectedStatuses.has(status)) selectedStatuses.delete(status); else selectedStatuses.add(status);
+    if(selectedStatuses.size===productivityStatuses.length) selectedStatuses.clear();
     renderMainContent();renderCustomCards();
   };
   window.toggleProductivityClient=function(id){
