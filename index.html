@@ -69,9 +69,12 @@
     .control:focus { border-color:var(--cyan); box-shadow:0 0 0 2px rgba(0,212,255,.1); }
 
     .summary-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:24px; }
-    .summary-card { min-width:0; padding:16px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); }
+    .summary-card { min-width:0; min-height:78px; padding:16px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); }
     .summary-value { font:700 23px 'Exo 2',sans-serif; }
     .summary-name { margin-top:7px; color:var(--muted); font-size:11px; letter-spacing:1px; text-transform:uppercase; }
+    .summary-action { width:100%; display:flex; align-items:center; color:var(--cyan); text-align:left; }
+    .summary-action .summary-name { margin-top:0; color:inherit; font:700 13px 'Exo 2',sans-serif; letter-spacing:1.2px; }
+    .summary-action:hover,.summary-action:focus-visible { border-color:var(--cyan); background:var(--surface-2); outline:none; }
 
     .section { margin-bottom:25px; }
     .section-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; padding-bottom:10px; margin-bottom:12px; border-bottom:1px solid var(--border); }
@@ -870,15 +873,7 @@
       const section=document.getElementById('summaryGrid');
       if(state.view!=='Painel') { section.classList.add('hidden'); return; }
       section.classList.remove('hidden');
-      let posts=getPosts();
-      if(state.clientId) posts=posts.filter(post=>post.clientId===state.clientId);
-      const cards=[
-        {label:'Total de posts',value:posts.length,className:''},
-        {label:'Publicados',value:posts.filter(post=>post.status==='Publicado').length,className:'status-publicado'},
-        {label:'Programados',value:posts.filter(post=>post.status==='Programado').length,className:'status-programado'},
-        {label:'Criar',value:posts.filter(post=>post.status==='Criar').length,className:'status-criar'}
-      ];
-      section.innerHTML=cards.map(card=>`<div class="summary-card"><div class="summary-value ${card.className}">${card.value}</div><div class="summary-name">${card.label}</div></div>`).join('');
+      section.innerHTML=`<button class="summary-card summary-action" type="button" onclick="openView('Ordem de Execução')"><span class="summary-name">Ordem de Execução</span></button>`;
     }
 
     function renderClients() {
